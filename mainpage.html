@@ -3,18 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="stylesheet.css">
-    <title>Document</title>
+    <title>Credit Rating</title>
+    <script src="website.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #8a42b0;
+            color: white;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+            position: fixed;
+        }
+        .sidebar button {
+            background-color: white;
+            color: #8a42b0;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .sidebar button:hover {
+            background-color: #0056b3;
+            color: white;
+        }
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+            width: calc(100% - 250px);
+            box-sizing: border-box;
+        }
+        form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        button.submit {
+            background-color: #8a42b0;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button.submit:hover {
+            background-color: #0056b3;
+        }
+        #adminLogin {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <header>
+    <div class="sidebar">
+        <button id="adminLoginButton">Admin Login</button>
+        <button id="toggleForm">Credit Rating Form</button>
+        <button id="report">Risk Report</button>
+    </div>
 
-    </header>
-    <main>
-    </main>
-    <footer>
+    <!-- Main Content -->
+    <div id="formContent" class="content">
+        <h1>Credit Rating Prediction Form</h1>
+        <form id="creditForm">
+            <label for="name">Company Name:</label>
+            <input type="text" id="name" name="name" placeholder="Enter your company name" required>
 
-    </footer>
-    <script src="website.js"></script>
+            <label for="revenue">Total Revenue:</label>
+            <input type="text" id="revenue" name="revenue" placeholder="Enter your total revenue" required>
+
+            <label for="interest">Current Ratio:</label>
+            <input type="text" id="ratio" name="ratio" placeholder="Enter your Current Ratio: Current Asset/Current Liability" required>
+
+            <label for="ratio">Debt to Equity Ratio:</label>
+            <input type="text" id="ratio" name="ratio" placeholder="Enter your Debt to Equity Ratio" required>
+
+            <label for="return">Quick Ratio:</label>
+            <input type="text" id="ratio" name="ratio" placeholder="Enter your Quick Ratio" required>
+
+            <button type="submit" class="submit">Predict</button>
+        </form>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="adminLogin" class="content">
+        <h1>Admin Login</h1>
+        <form id="adminForm">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" placeholder="Enter your username" required>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+
+            <button type="submit" class="submit">Login</button>
+        </form>
+    </div>
+
+    <script>
+        const companies = JSON.parse(localStorage.getItem('companies')) || []; // Load companies from localStorage
+
+        const saveCompanies = () => {
+            localStorage.setItem('companies', JSON.stringify(companies));
+        };
+
+        const formContent = document.getElementById('formContent');
+        const adminLogin = document.getElementById('adminLogin');
+
+        document.getElementById('creditForm').addEventListener('submit', event => {
+            event.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const revenue = parseFloat(document.getElementById('revenue').value);
+            const interest = parseFloat(document.getElementById('ratio').value);
+            const ratio = parseFloat(document.getElementById('ratio').value);
+            const returnOnEquity = parseFloat(document.getElementById('ratio').value);
+
+            // Determine credit rating
+            const riskCategory = (revenue > 1000000 && interest > 3 && ratio < 1 && returnOnEquity > 15) ? 'Low Risk'
+                : (revenue > 500000 && interest > 2 && ratio < 2) ? 'Medium Risk'
+                : 'High Risk';
+
+            // Add new company and save
+            companies.push({ name, riskCategory });
+            saveCompanies();
+
+            // Clear form
+            event.target.reset();
+        });
+
+        document.getElementById('adminLoginButton').addEventListener('click', () => {
+            formContent.style.display = 'none';
+            adminLogin.style.display = 'block';
+        });
+
+        document.getElementById('toggleForm').addEventListener('click', () => {
+            adminLogin.style.display = 'none';
+            formContent.style.display = 'block';
+        });
+
+        document.getElementById('adminForm').addEventListener('submit', event => {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Simple admin validation
+            if (username === 'admin' && password === 'password123') {
+                alert('Login successful!');
+                location.reload(); // Redirect to main page after login
+            } else {
+                alert('Invalid username or password.');
+            }
+        });
+    </script>
 </body>
 </html>
