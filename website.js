@@ -37,6 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
         creditForm.addEventListener('submit', (e) => {
             e.preventDefault();
             alert('Credit Rating Prediction Submitted!');
+
+            creditForm.reset();
         });
     }
 
