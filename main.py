@@ -1,5 +1,6 @@
-import pandas as pd
-rating = pd.read_csv('Cleansed Set B Corporate Rating.csv')
+import pickle as pkl
 
-df_loaded = pd.read_pickle('df.pkl')
-print(df_loaded)
+with open('data.pkl', 'rb') as file:
+    data = pkl.load(file)
+
+print(data)
