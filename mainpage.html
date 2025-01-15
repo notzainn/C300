@@ -20,6 +20,11 @@
             padding: 20px;
             box-sizing: border-box;
             position: fixed;
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+        }
+        .sidebar.hidden {
+            transform: translateX(-250px);
         }
         .sidebar button {
             background-color: white;
@@ -31,16 +36,49 @@
             border-radius: 10px;
             width: 100%;
             margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
         .sidebar button:hover {
             background-color: #0056b3;
             color: white;
         }
+        .toggle-sidebar-button {
+            position: fixed;
+            top: 20px;
+            left: 270px;
+            z-index: 1000;
+            background-color: transparent;
+            color: #8a42b0;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 5px;
+            width: auto;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+         .toggle-sidebar-button:hover {
+            background-color: #8a42b0;
+            color: white;
+        } 
         .content {
             margin-left: 250px;
             padding: 20px;
             width: calc(100% - 250px);
             box-sizing: border-box;
+            transition: margin-left 0.3s ease;
+        }
+
+        .content h1{
+            text-align: center;
+        }
+        .content.full-width {
+            margin-left: 0;
+            width: 100%;
         }
         form {
             max-width: 500px;
@@ -72,10 +110,15 @@
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <button id="adminLoginButton">Admin Login</button>
-        <button id="toggleForm">Credit Rating Form</button>
-        <button id="report">Risk Report</button>
+    <button class="toggle-sidebar-button" id="sidebarToggle">☰</button>
+    <div class="sidebar" id="sidebar">
+        <button id="adminLoginButton">
+            <span>Admin Login</span>
+        </button>
+        <button id="toggleForm">
+            <span>Credit Rating Form</span>
+        </button>
+
     </div>
 
     <!-- Main Content -->
@@ -85,19 +128,53 @@
             <label for="name">Company Name:</label>
             <input type="text" id="name" name="name" placeholder="Enter your company name" required>
 
+            <label for="cash">Cash</label>
+            <input type="text" id="cash" name="cash" placeholder="Enter your total cash" required>
+
+            <label for="Total Inventory">Total Inventory</label>
+            <input type="text" id="Total Inventory" name="Total Inventory" placeholder="Enter your total inventory" required>
+
+            <label for="Non-Current Asset">Non-Current Asset</label>
+            <input type="Non-Current Asset" id="Non-Current Asset" name="Non-Current Asset" placeholder="Enter your Non-Current Asset" required>
+
+            <label for="Current Liability">Current Liability</label>
+            <input type="text" id="Current Liability" name="Current Liability" placeholder="Enter your Current Liability" required>
+
+            <label for="Gross Profit ">Gross Profit (+/-):</label>
+            <input type="text" id="Gross Profit" name="Gross Profit" placeholder="Enter your Gross Profit" required>
+
+            <label for="Retained Earnings">Retained Earnings:</label>
+            <input type="Retained Earnings" id="Retained Earnings" name="Retained Earnings" placeholder="Enter your Retained Earnings" required>
+
+            <label for="Earnings before interest">Earnings before interest:</label>
+            <input type="text" id="Earnings before interest" name="Earnings before interest" placeholder="Enter your Earnings before interest" required>
+
+            <label for="Dividends per Share">Dividends per Share:</label>
+            <input type="text" id="Dividends per Share" name="Dividends per Share" placeholder="Enter your Dividends per Share" required>
+
+            <label for="equity">Total Stockholders Equity:</label>
+            <input type="text" id="equity" name="equity" placeholder="Enter your Total Stockholders Equity" required>
+
+            <label for="market">Total Market Value:</label>
+            <input type="text" id="market" name="market" placeholder="Enter your Total Market Value" required>
+
             <label for="revenue">Total Revenue:</label>
-            <input type="text" id="revenue" name="revenue" placeholder="Enter your total revenue" required>
+            <input type="text" id="revenue" name="revenue" placeholder="Enter your Total Revenue" required>
 
-            <label for="interest">Current Ratio:</label>
-            <input type="text" id="ratio" name="ratio" placeholder="Enter your Current Ratio: Current Asset/Current Liability" required>
+            <label for="cash">Net Cash Flow:</label>
+            <input type="text" id="cash" name="cash" placeholder="Enter your Net Cash Flow" required>
 
-            <label for="ratio">Debt to Equity Ratio:</label>
-            <input type="text" id="ratio" name="ratio" placeholder="Enter your Debt to Equity Ratio" required>
+            <label for="debt">Total Long-Term Debt:</label>
+            <input type="text" id="debt" name="debt" placeholder="Enter your Total Long-Term Debt" required>
 
-            <label for="return">Quick Ratio:</label>
-            <input type="text" id="ratio" name="ratio" placeholder="Enter your Quick Ratio" required>
+            <label for="interest">Total Interest and Related Expense:</label>
+            <input type="text" id="interest" name="interest" placeholder="Enter your Total Interest and Related Expense" required>
+
+            <label for="turnover">Sales Turnover (Net):</label>
+            <input type="text" id="turnover" name="turnover" placeholder="Enter your Sales Turnover (Net)" required>
 
             <button type="submit" class="submit">Predict</button>
+
         </form>
     </div>
 
@@ -114,62 +191,5 @@
             <button type="submit" class="submit">Login</button>
         </form>
     </div>
-
-    <script>
-        const companies = JSON.parse(localStorage.getItem('companies')) || []; // Load companies from localStorage
-
-        const saveCompanies = () => {
-            localStorage.setItem('companies', JSON.stringify(companies));
-        };
-
-        const formContent = document.getElementById('formContent');
-        const adminLogin = document.getElementById('adminLogin');
-
-        document.getElementById('creditForm').addEventListener('submit', event => {
-            event.preventDefault();
-
-            const name = document.getElementById('name').value;
-            const revenue = parseFloat(document.getElementById('revenue').value);
-            const interest = parseFloat(document.getElementById('ratio').value);
-            const ratio = parseFloat(document.getElementById('ratio').value);
-            const returnOnEquity = parseFloat(document.getElementById('ratio').value);
-
-            // Determine credit rating
-            const riskCategory = (revenue > 1000000 && interest > 3 && ratio < 1 && returnOnEquity > 15) ? 'Low Risk'
-                : (revenue > 500000 && interest > 2 && ratio < 2) ? 'Medium Risk'
-                : 'High Risk';
-
-            // Add new company and save
-            companies.push({ name, riskCategory });
-            saveCompanies();
-
-            // Clear form
-            event.target.reset();
-        });
-
-        document.getElementById('adminLoginButton').addEventListener('click', () => {
-            formContent.style.display = 'none';
-            adminLogin.style.display = 'block';
-        });
-
-        document.getElementById('toggleForm').addEventListener('click', () => {
-            adminLogin.style.display = 'none';
-            formContent.style.display = 'block';
-        });
-
-        document.getElementById('adminForm').addEventListener('submit', event => {
-            event.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            // Simple admin validation
-            if (username === 'admin' && password === 'password123') {
-                alert('Login successful!');
-                location.reload(); // Redirect to main page after login
-            } else {
-                alert('Invalid username or password.');
-            }
-        });
-    </script>
 </body>
 </html>
