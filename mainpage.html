@@ -165,7 +165,7 @@
             // Simple admin validation
             if (username === 'admin' && password === 'password123') {
                 alert('Login successful!');
-                location.reload(); // Redirect to main page after login
+                window.location.href = 'admin.html'; // Redirect to the admin page
             } else {
                 alert('Invalid username or password.');
             }
