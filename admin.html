@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label, input, button {
+            display: block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to the Admin Dashboard</h1>
+    <p>This is a secure area for authorized personnel only.</p>
+    <button onclick="window.location.href='index.html';">Back to Main Page</button>
+
+    <h2>Manage Companies</h2>
+
+    <!-- Form to Add or Update Company -->
+    <form id="companyForm">
+        <label for="name">Company Name:</label>
+        <input type="text" id="name" name="name" placeholder="Enter company name" required>
+
+        <label for="revenue">Total Revenue:</label>
+        <input type="number" id="revenue" name="revenue" placeholder="Enter revenue" required>
+
+        <label for="riskCategory">Risk Category:</label>
+        <select id="riskCategory" name="riskCategory" required>
+            <option value="Low Risk">Low Risk</option>
+            <option value="Medium Risk">Medium Risk</option>
+            <option value="High Risk">High Risk</option>
+        </select>
+
+        <button type="submit">Save</button>
+    </form>
+
+    <!-- Table to Display Companies -->
+    <table id="companyTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Revenue</th>
+                <th>Risk Category</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script src="admin.js"></script>
+</body>
+</html>
