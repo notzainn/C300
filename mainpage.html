@@ -20,6 +20,11 @@
             padding: 20px;
             box-sizing: border-box;
             position: fixed;
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+        }
+        .sidebar.hidden {
+            transform: translateX(-250px);
         }
         .sidebar button {
             background-color: white;
@@ -31,16 +36,49 @@
             border-radius: 10px;
             width: 100%;
             margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
         .sidebar button:hover {
             background-color: #0056b3;
             color: white;
         }
+        .toggle-sidebar-button {
+            position: fixed;
+            top: 20px;
+            left: 270px;
+            z-index: 1000;
+            background-color: transparent;
+            color: #8a42b0;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 5px;
+            width: auto;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+         .toggle-sidebar-button:hover {
+            background-color: #8a42b0;
+            color: white;
+        } 
         .content {
             margin-left: 250px;
             padding: 20px;
             width: calc(100% - 250px);
             box-sizing: border-box;
+            transition: margin-left 0.3s ease;
+        }
+
+        .content h1{
+            text-align: center;
+        }
+        .content.full-width {
+            margin-left: 0;
+            width: 100%;
         }
         form {
             max-width: 500px;
@@ -72,10 +110,17 @@
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <button id="adminLoginButton">Admin Login</button>
-        <button id="toggleForm">Credit Rating Form</button>
-        <button id="report">Risk Report</button>
+    <button class="toggle-sidebar-button" id="sidebarToggle">☰</button>
+    <div class="sidebar" id="sidebar">
+        <button id="adminLoginButton">
+            <span>Admin Login</span>
+        </button>
+        <button id="toggleForm">
+            <span>Credit Rating Form</span>
+        </button>
+        <button id="report">
+            <span>Risk Report</span>
+        </button>
     </div>
 
     <!-- Main Content -->
@@ -114,62 +159,5 @@
             <button type="submit" class="submit">Login</button>
         </form>
     </div>
-
-    <script>
-        const companies = JSON.parse(localStorage.getItem('companies')) || []; // Load companies from localStorage
-
-        const saveCompanies = () => {
-            localStorage.setItem('companies', JSON.stringify(companies));
-        };
-
-        const formContent = document.getElementById('formContent');
-        const adminLogin = document.getElementById('adminLogin');
-
-        document.getElementById('creditForm').addEventListener('submit', event => {
-            event.preventDefault();
-
-            const name = document.getElementById('name').value;
-            const revenue = parseFloat(document.getElementById('revenue').value);
-            const interest = parseFloat(document.getElementById('ratio').value);
-            const ratio = parseFloat(document.getElementById('ratio').value);
-            const returnOnEquity = parseFloat(document.getElementById('ratio').value);
-
-            // Determine credit rating
-            const riskCategory = (revenue > 1000000 && interest > 3 && ratio < 1 && returnOnEquity > 15) ? 'Low Risk'
-                : (revenue > 500000 && interest > 2 && ratio < 2) ? 'Medium Risk'
-                : 'High Risk';
-
-            // Add new company and save
-            companies.push({ name, riskCategory });
-            saveCompanies();
-
-            // Clear form
-            event.target.reset();
-        });
-
-        document.getElementById('adminLoginButton').addEventListener('click', () => {
-            formContent.style.display = 'none';
-            adminLogin.style.display = 'block';
-        });
-
-        document.getElementById('toggleForm').addEventListener('click', () => {
-            adminLogin.style.display = 'none';
-            formContent.style.display = 'block';
-        });
-
-        document.getElementById('adminForm').addEventListener('submit', event => {
-            event.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            // Simple admin validation
-            if (username === 'admin' && password === 'password123') {
-                alert('Login successful!');
-                location.reload(); // Redirect to main page after login
-            } else {
-                alert('Invalid username or password.');
-            }
-        });
-    </script>
 </body>
 </html>
