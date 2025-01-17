@@ -1,0 +1,36 @@
+# Python-related files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Django-related files
+*.sqlite3
+db.sqlite3
+media/
+#static/
+
+# Environment variables and credentials
+.env
+*.env
+
+# Virtual environment folder (if you use one)
+venv/
+env/
+ENV/
+
+# IDEs and text editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# PyCharm project files
+.idea/
+
+# Jupyter Notebook files
+.ipynb_checkpoints
+
+# System files
+.DS_Store
+Thumbs.db
