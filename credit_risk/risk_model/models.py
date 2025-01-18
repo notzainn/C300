@@ -30,3 +30,18 @@ class Prediction(models.Model):
 
     def __str__(self):
         return f"Prediction for UserInput {self.user_input.id}" # Debugging or admin display
+
+class Company(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # Matches the 'name' field in JavaScript
+    revenue = models.FloatField()  # Matches the 'revenue' field in JavaScript as a float
+    risk_category = models.CharField(
+        max_length=50,
+        choices=[
+            ('Low Risk', 'Low Risk'),
+            ('Medium Risk', 'Medium Risk'),
+            ('High Risk', 'High Risk'),
+        ],
+    )  # Matches the 'riskCategory' field in JavaScript
+
+    def __str__(self):
+        return self.name
