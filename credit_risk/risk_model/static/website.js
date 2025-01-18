@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const sidebarToggle = document.getElementById('sidebarToggle');
-    console.log('Sidebar Toggle:', sidebarToggle);
+    // console.log('Sidebar Toggle:', sidebarToggle);
     const sidebar = document.getElementById('sidebar');
     const formContent = document.getElementById('formContent');
     const adminLogin = document.getElementById('adminLogin');
@@ -38,7 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
         creditForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(creditForm);
+    
             try {
+                console.log('Submitting form data:', [...formData.entries()]); // Debugging form data
                 const response = await fetch('/risk_model/predict/', {
                     method: 'POST',
                     body: formData,
@@ -46,17 +48,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                     }
                 });
-
+    
                 if (response.ok) {
-                    const data = await response.json();
-                    alert(`Prediction Result: ${data.prediction_result}`);
-                    window.location.href = '/risk_model/show_prediction/';
+                    try {
+                        // If the view returns an HTML template, redirect the user to the returned page
+                        const html = await response.text();
+                        document.open(); // Open the current document
+                        document.write(html); // Replace the current document with the new HTML
+                        document.close(); // Close the document to finalize
+                    } catch (htmlError) {
+                        console.error('Error processing HTML response:', htmlError);
+                        alert('The server returned invalid HTML.');
+                    }
                 } else {
-                    alert('Error in prediction submission.');
+                    // Handle non-OK responses and log the error
+                    const errorText = await response.text();
+                    console.error('Non-OK response received:', response.status, errorText);
+                    alert(`Error ${response.status}: ${errorText}`);
                 }
             } catch (error) {
                 console.error('Error submitting form:', error);
-                alert('An unexpected error occurred.');
+                alert('An unexpected error occurred. Please check the console for details.');
             }
         });
     }
