@@ -15,9 +15,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+from django.shortcuts import redirect
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('risk_model.urls')),
+    path('admin/', admin.site.urls),  # Admin route
+    path('risk_model/', include('risk_model.urls')),  # Include risk_model app's URLs
+    path('', lambda request: redirect('/risk_model/')),  # Redirect root URL to /risk_model/
 ]
