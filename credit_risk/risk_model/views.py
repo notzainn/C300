@@ -9,7 +9,7 @@ import json
 
 # Load trained XG boost model
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-model_path = os.path.join(BASE_DIR, 'machine_learning', 'updated_xgb_model.pk1')
+model_path = os.path.join(BASE_DIR, 'machine_learning', 'updated_xgb_model.pkl')
 
 # Load the model once when the app starts
 def load_model():
