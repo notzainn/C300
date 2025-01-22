@@ -1,10 +1,12 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Credit Rating</title>
-    <script src="website.js"></script>
+    <script src="{% static 'website.js' %}"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -214,6 +216,8 @@
 
     <!-- Admin Login Modal -->
     <div id="adminLogin" class="content">
+        <form id="adminForm" method="post" action="/risk_model/admin_login/">
+            {% csrf_token %}
         <h1>Admin Login</h1>
         <form id="adminForm">
             <label for="username">Username:</label>
@@ -225,5 +229,6 @@
             <button type="submit" class="submit">Login</button>
         </form>
     </div>
+
 </body>
 </html>

@@ -4,11 +4,12 @@ import pickle as pkl
 import os
 from django.http import JsonResponse
 from django.shortcuts import render
-from .models import UserInput, Prediction # import models for saving User Input and predictions
+from .models import Company, UserInput, Prediction # import models for saving User Input and predictions
+import json
 
 # Load trained XG boost model
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-model_path = os.path.join(BASE_DIR, 'machine_learning', 'updated_xgb_model.pk1')
+model_path = os.path.join(BASE_DIR, 'machine_learning', 'updated_xgb_model.pkl')
 
 # Load the model once when the app starts
 def load_model():
@@ -159,3 +160,52 @@ def calculateRatios(data):
     }
 
     return ratios
+
+def admin_dashboard(request):
+    return render(request, 'risk_model/admin.html')  # Replace 'app_name' with your actual app name
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+# API for CRUD operations
+def companies_api(request):
+    if request.method == 'GET':
+        try:
+            companies = list(Company.objects.values('id', 'name', 'revenue', 'risk_category'))
+            return JsonResponse(companies, safe=False)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            company, created = Company.objects.update_or_create(
+                name=data['name'],
+                defaults={
+                    'revenue': data['revenue'],
+                    'risk_category': data['riskCategory']
+                }
+            )
+            return JsonResponse({'status': 'success', 'created': created})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    elif request.method == 'DELETE':
+        try:
+            data = json.loads(request.body)
+            Company.objects.filter(id=data['id']).delete()
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+
+def admin_login(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        # Mock admin login validation
+        if username == 'admin' and password == 'password123':
+            return JsonResponse({'success': True})
+        return JsonResponse({'success': False})
+    return JsonResponse({'error': 'Invalid method'}, status=400)
