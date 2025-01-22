@@ -300,3 +300,35 @@ def xgb_XAI():
     for feature in top10:
         print(f"Feature Criteria: {feature[0]} \nFeature Importance: {round(feature[1],2)} \n")
 
+
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+
+def export_to_pdf(request):
+    # Fetch data from the database
+    companies = Company.objects.all()  # Query all company data
+
+    # Prepare context for the template
+    context = {
+        "companies": companies, 
+    }
+
+    # Load the HTML template
+    template = get_template("risk_model/export_template.html")  # Create this template
+
+    # Render the template with the context
+    html = template.render(context)
+
+    # Create PDF response
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="Company_Data.pdf"'
+
+    # Convert the HTML to PDF using xhtml2pdf
+    pisa_status = pisa.CreatePDF(html, dest=response)
+
+    # Check for errors
+    if pisa_status.err:
+        return HttpResponse("Error occurred while generating the PDF", status=500)
+
+    return response

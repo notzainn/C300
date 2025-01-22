@@ -109,6 +109,41 @@
         #adminLogin {
             display: none;
         }
+        .form-container {
+            display: flex;
+            justify-content: center; /* Center the form horizontally */
+            gap: 20px; /* Add space between columns */
+            margin-top: 20px;
+        }
+        .form-column {
+            flex: 1; /* Take equal space for both columns */
+            max-width: 50%; /* Limit width to half the screen */
+        }
+        .form-column label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-column input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .form-column button {
+            width: 100%;
+            background-color: #8a42b0;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .form-column button:hover {
+            background-color: #0056b3;
+        }
+
     </style>
 </head>
 <body>
@@ -178,8 +213,11 @@
             <button type="submit" class="submit">Predict</button> -->
 
             <!-- Need to update this part cause need post to database-->
+            <div class="form-container">
+                <!-- Left Column -->
+                <div class="form-column">
                 <form id="creditForm" method="post" action="/risk_model/predict/">
-                <!--{% csrf_token %}-->
+                    {% csrf_token %}
                     <label for="cash">Cash:</label>
                     <input type="number" step="0.01" id="cash" name="cash" placeholder="Enter your total cash" required>
                     <label for="total_inventory">Total Inventory:</label>
@@ -194,6 +232,9 @@
                     <input type="number" step="0.01" id="retained_earnings" name="retained_earnings" placeholder="Enter your Retained Earnings" required>
                     <label for="earnings_before_interest">Earnings Before Interest:</label>
                     <input type="number" step="0.01" id="earnings_before_interest" name="earnings_before_interest" placeholder="Enter your Earnings Before Interest" required>
+                </div> 
+                 <!-- Right Column -->
+                <div class="form-column">
                     <label for="dividends_per_share">Dividends per Share:</label>
                     <input type="number" step="0.01" id="dividends_per_share" name="dividends_per_share" placeholder="Enter your Dividends per Share" required>
                     <label for="equity">Total Stockholders Equity:</label>
@@ -211,7 +252,10 @@
                     <label for="sales_turnover_net">Sales Turnover (Net):</label>
                     <input type="number" step="0.01" id="sales_turnover_net" name="sales_turnover_net" placeholder="Enter your Sales Turnover (Net)" required>
                     <button type="submit">Predict Risk</button>
-            </form>
+                </form>
+            </div>
+        </div>
+    </div>
         </div>
 
     <!-- Admin Login Modal -->

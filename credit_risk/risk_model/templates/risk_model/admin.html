@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
+
+    <!-- Include DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,7 +27,24 @@
             text-align: left;
         }
         th {
-            background-color: #f4f4f4;
+            background-color: #ad6fd3; /* Purple color for the header */
+            color: white; /* White text on the purple header */
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            background-color: #ad6fd3; /* Purple color for the pagination buttons */
+            color: white;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background-color: #ad6fd3; /* Darker purple on hover */
+        }
+        .dataTables_wrapper .dataTables_length select,
+        .dataTables_wrapper .dataTables_filter input {
+            background-color: #c394e0; /* Purple background for the select and search boxes */
+            color: white;
+        }
+        .dataTables_wrapper .dataTables_length select option,
+        .dataTables_wrapper .dataTables_filter input {
+            color: black;
         }
         form {
             margin-bottom: 20px;
@@ -32,15 +53,87 @@
             display: block;
             margin-bottom: 10px;
         }
+        .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-container {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 30px;
+    margin-top: 30px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+label {
+    font-size: 16px;
+    margin-bottom: 8px;
+    display: block;
+    color: #555;
+}
+
+input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+input[type="text"]:focus, input[type="number"]:focus, select:focus {
+    border-color: #6a1b9a; /* Focus color */
+    background-color: #f0f4f9; /* Background on focus */
+}
+
+button[type="submit"] {
+    background-color: #6a1b9a;
+    color: white;
+    padding: 12px 25px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+}
+
+button[type="submit"]:hover {
+    background-color: #4a148c;
+}
+
+button[type="button"] {
+    background-color: #ccc;
+    color: #333;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+}
+
+button[type="button"]:hover {
+    background-color: #aaa;
+}
+
     </style>
 </head>
 <body>
     <h1>Welcome to the Admin Dashboard</h1>
     <p>This is a secure area for authorized personnel only.</p>
-    <button onclick="window.location.href='{% url 'main_page' %}';">Back to Main Page</button>
+    <!-- <button onclick="window.location.href='{% url 'main_page' %}';">Back to Main Page</button> -->
 
-
-    <h2>Manage Companies</h2>
+    <h2>Add Companies</h2>
 
     <!-- Form to Add or Update Company -->
     <form id="companyForm">
@@ -56,12 +149,13 @@
             <option value="Medium Risk">Medium Risk</option>
             <option value="High Risk">High Risk</option>
         </select>
-
-        <button type="submit">Save</button>
+        <div style="margin-top: 20px; text-align: center;">
+            <button type="submit">Save</button>
+        </div>
     </form>
 
     <!-- Table to Display Companies -->
-    <table id="companyTable">
+    <table id="companyTable" class="display">
         <thead>
             <tr>
                 <th>Name</th>
@@ -73,6 +167,52 @@
         <tbody></tbody>
     </table>
 
+    <div style="margin-top: 20px; text-align: center;">
+        <button onclick="window.location.href='{% url "export_to_pdf" %}'">Export to PDF</button>
+        <button onclick="window.location.href='{% url 'main_page' %}';">Back to Main Page</button>
+    </div>
+
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Include DataTables JS -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+
     <script src="{% static 'admin.js' %}"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTables with options
+            $('#companyTable').DataTable({
+                "pagingType": "full_numbers", // Pagination type
+                "lengthMenu": [10, 25, 50, 75, 100], // Entries per page option
+                "searching": true, // Enable search functionality
+                "ordering": true, // Enable sorting functionality
+                "info": true, // Show "Showing X to Y of Z entries"
+                "autoWidth": false // Adjust column width automatically
+            });
+
+            // Form submission logic (Add or update company)
+            $('#companyForm').submit(function(event) {
+                event.preventDefault();
+
+                const name = $('#name').val();
+                const revenue = $('#revenue').val();
+                const riskCategory = $('#riskCategory').val();
+
+                // Add a new row to the table
+                const table = $('#companyTable').DataTable();
+                table.row.add([
+                    name,
+                    revenue,
+                    riskCategory,
+                    '<button>Edit</button> <button>Delete</button>'
+                ]).draw();
+
+                // Reset the form
+                $('#companyForm')[0].reset();
+            });
+        });
+    </script>
 </body>
 </html>
