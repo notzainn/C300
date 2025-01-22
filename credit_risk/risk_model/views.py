@@ -1,21 +1,35 @@
 import numpy as np
 import pandas as pd
+import xgboost as xgb
 import pickle as pkl
+import matplotlib.pyplot as plt
+import seaborn as sbn
+from sklearn.metrics import roc_curve, confusion_matrix, auc
+import shap
+import lime
+import lime.lime_tabular
 import os
 from django.http import JsonResponse
 from django.shortcuts import render
 from .models import Company, UserInput, Prediction # import models for saving User Input and predictions
 import json
 
+
 # Load trained XG boost model
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 model_path = os.path.join(BASE_DIR, 'machine_learning', 'updated_xgb_model.pkl')
+data_path = os.path.join(BASE_DIR, 'machine_learning', 'data.pkl')
 
 # Load the model once when the app starts
 def load_model():
     with open(model_path, 'rb') as model_file:
         model = pkl.load(model_file)
     return model
+
+def load_data():
+    with open(data_path, 'rb') as data_file:
+        data = pkl.load(data_file)
+    return data
 
 custom_mapping = {
     'In Default': 5,
@@ -28,7 +42,9 @@ custom_mapping = {
 
 reverse_mapping = {value: key for key, value in custom_mapping.items()}  # Reverse mapping for predictions
 
+# initialise/load the model & data into a variable
 model = load_model()
+data = load_data()
 
 def dummy_view(request):
     return render(request, 'risk_model/dummy.html')
@@ -209,3 +225,78 @@ def admin_login(request):
             return JsonResponse({'success': True})
         return JsonResponse({'success': False})
     return JsonResponse({'error': 'Invalid method'}, status=400)
+
+
+# function to provide explanation for predicted risk 
+def xgb_XAI():
+    input_data = {
+             "Cash": 50000.0,  # Example: $50,000
+             "Total Inventory": 120000.0,  # Example: $120,000
+             "Non-Current Asset": 100000.0,
+             "Current Liability": 80000.0,  # Example: $80,000
+             "Gross Profit": 250000.0,  # Example: $250,000
+             "Retained Earnings": 100000.0,  # Example: $100,000
+             "Earnings before interest": 75000.0,  # Example: $75,000
+             "Dividends per Share": 2.5,  # Example: $2.50
+             "Total Stockholders Equity": 300000.0,  # Example: $300,000
+             "Total Market Value": 500000.0,  # Example: $500,000
+             "Total Revenue": 1000000.0,  # Example: $1,000,000
+             "Net Cash Flow": 150000.0,  # Example: $150,000
+             "Total Long-Term Debt": 200000.0,  # Example: $200,000
+             "Total Interest and Related Expense": 25000.0,  # Example: $25,000
+             "Sales Turnover (Net)": 900000.0,  # Example: $900,000
+    }
+
+    ratios = calculateRatios(input_data)
+
+    combined_data = {**input_data, **ratios}
+    features = {
+            'Cash': combined_data["Cash"],
+            'Earnings Before Interest': combined_data["Earnings before interest"],
+            'Gross Profit (Loss)': combined_data["Gross Profit"],
+            'Retained Earnings': combined_data["Retained Earnings"],
+            'EBTI Margin (Revenue)': combined_data["EBTI Margin"],
+            'Dividends per Share - Pay Date - Calendar': combined_data["Dividends per Share"],
+            'Total Stockholders Equity': combined_data["Total Stockholders Equity"],
+            'Total Market Value (Fiscal Years)': combined_data["Total Market Value"],
+            'Total Revenue': combined_data["Total Revenue"],
+            'Net Cash Flow': combined_data["Net Cash Flow"],
+            'Debt to Equity Ratio': combined_data["Debt_to_Equity"],
+            'Return on Asset': combined_data["Return on Asset Ratio"],
+            'Interest Coverage': combined_data["Interest Coverage"],
+            'Current Ratio': combined_data["Current Ratio"],
+            'Return on Equity': combined_data["Return on Equity"],
+            'Quick Ratio': combined_data["Quick Ratio"]
+    }
+
+    input_df = pd.DataFrame([features])
+
+    predicted_risk = model.predict(input_df)
+    predicted_risk_proba = model.predict_proba(input_df)[:, 1]
+
+    print(f"Predicted Risk: {reverse_mapping.get(predicted_risk[0])} \nPredicted Risk Probability: {predicted_risk_proba[0]}")
+
+    X_train = data.drop(columns=['Risk Rating'])
+
+    explainer = lime.lime_tabular.LimeTabularExplainer(
+        training_data= X_train.values,
+        mode="classification",
+        class_names=['Lowest Risk', 'Low Risk', 'Medium Risk', 'High Risk', 'Highest Risk', 'In Default'],
+        feature_names=X_train.columns,
+        discretize_continuous=True
+    )
+
+    explanation = explainer.explain_instance(
+        input_df.values[0],
+        model.predict_proba
+    )
+
+    feature_impt = explanation.as_list()
+
+    sorted_importance = sorted(feature_impt, key=lambda x:abs(x[1]), reverse=True)
+
+    top10 = sorted_importance[:10]
+    
+    for feature in top10:
+        print(f"Feature Criteria: {feature[0]} \nFeature Importance: {round(feature[1],2)} \n")
+
