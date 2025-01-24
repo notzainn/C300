@@ -9,9 +9,10 @@ import shap
 import lime
 import lime.lime_tabular
 import os
+import re
 from django.http import JsonResponse
 from django.shortcuts import render
-from .models import Company, UserInput, Prediction # import models for saving User Input and predictions
+#from .models import Company, UserInput, Prediction # import models for saving User Input and predictions
 import json
 
 
@@ -297,9 +298,46 @@ def xgb_XAI():
 
     top10 = sorted_importance[:10]
     
-    for feature in top10:
-        print(f"Feature Criteria: {feature[0]} \nFeature Importance: {round(feature[1],2)} \n")
+    # for feature in top10:
+    #     print(f"Feature Criteria: {feature[0]} \nFeature Importance: {round(feature[1],2)} \n")
 
+    reccomendation(input_df, top10)
+
+
+def reccomendation(input_df, feature_crit):
+
+    for criteria, importance in feature_crit:
+        
+        # regular expression to identify criterias
+        feature_re = r"([\d.+])*\s*(<=|=>|<|>)*\s*([a-zA-Z\s()-]+)\s*(<=|>=|<|>)\s*([\d.]+)"
+        # split all based on matches
+        matches = re.findall(feature_re, criteria)
+
+        print(matches, ", ", criteria)
+        
+        condition_bool = True
+
+        # for condition in conditions:
+        #     if '>' in condition:
+        #         feature_name, threshold = condition.split(' > ')
+        #         operator = '>'
+        #     elif '<' in condition:
+        #         feature_name, threshold = condition.split(' < ')
+        #         operator = '<'
+        #     elif '>=' in condition:
+        #         feature_name, threshold = condition.split(' >= ')
+        #         operator = '>='
+        #     elif '<=' in condition:
+        #         feature_name, threshold = condition.split(' <= ')
+        #         operator = '<='
+            
+        #     threshold = float(threshold)
+
+        #     print(f"{feature_name}: {operator}")
+
+
+
+xgb_XAI()
 
 from django.http import HttpResponse
 from django.template.loader import get_template
