@@ -12,7 +12,9 @@ import os
 import re
 from django.http import JsonResponse
 from django.shortcuts import render
-#from .models import Company, UserInput, Prediction # import models for saving User Input and predictions
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
+from .models import Company, UserInput, Prediction  # Import models for saving User Input and predictions
 import json
 
 
@@ -43,7 +45,7 @@ custom_mapping = {
 
 reverse_mapping = {value: key for key, value in custom_mapping.items()}  # Reverse mapping for predictions
 
-# initialise/load the model & data into a variable
+# Initialise/load the model & data into a variable
 model = load_model()
 data = load_data()
 
@@ -53,126 +55,117 @@ def dummy_view(request):
 def main_page(request):
     return render(request, 'risk_model/main_page.html')
 
-# # View to handle user input and return prediction - THIS WAS ORIGINALLY FOR TESTING, CAN DELETE IF NO NEED ANYM
-# def predict_risk(request):
-#     #if request.method == "POST":
-#         # Extract user inputs from the request (assuming JSON format)
-#         #input_data = request.POST.get('input_data')  # Or request.body for JSON input
-#         input_data = {
-#             "Cash": 50000.0,  # Example: $50,000
-#             "Total Inventory": 120000.0,  # Example: $120,000
-#             "Non-Current Asset": 100000.0,
-#             "Current Liability": 80000.0,  # Example: $80,000
-#             "Gross Profit": 250000.0,  # Example: $250,000
-#             "Retained Earnings": 100000.0,  # Example: $100,000
-#             "Earnings before interest": 75000.0,  # Example: $75,000
-#             "Dividends per Share": 2.5,  # Example: $2.50
-#             "Total Stockholders Equity": 300000.0,  # Example: $300,000
-#             "Total Market Value": 500000.0,  # Example: $500,000
-#             "Total Revenue": 1000000.0,  # Example: $1,000,000
-#             "Net Cash Flow": 150000.0,  # Example: $150,000
-#             "Total Long-Term Debt": 200000.0,  # Example: $200,000
-#             "Total Interest and Related Expense": 25000.0,  # Example: $25,000
-#             "Sales Turnover (Net)": 900000.0,  # Example: $900,000
-#         }
+# View to handle saving of records
+def main_page(request):
+    return render(request, 'risk_model/main_page.html')
+
+# View to handle saving of records
+def save_prediction(request):
+    if request.method == "POST":
+        # Get the UserInput ID and the predicted risk rating from the POST request
+        user_input_id = request.POST.get('user_input_id')  # Get UserInput reference
+        prediction = request.POST.get('prediction')  # Get the risk rating
+
+        # Retrieve the related UserInput instance
+        user_input = get_object_or_404(UserInput, id=user_input_id)
+
+        # Save the prediction
+        Prediction.objects.create(
+            user_input=user_input,
+            risk_rating=prediction
+        )
+
+        # Add a success message
+        saved_messages.success(request, "Record successfully saved.")
+
+        # Redirect back to the main page
+        return redirect(reverse('main_page'))
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 # View to handle form submissions and make predictions
 def predict_risk(request):
     if request.method == "POST":
+        # Input data mapped to match the UserInput model fields
         input_data = {
-            "Cash": float(request.POST['cash']),
-            "Total Inventory": float(request.POST['total_inventory']),
-            "Non-Current Asset": float(request.POST['non_current_asset']),
-            "Current Liability": float(request.POST['current_liability']),
-            "Gross Profit": float(request.POST['gross_profit']),
-            "Retained Earnings": float(request.POST['retained_earnings']),
-            "Earnings before interest": float(request.POST['earnings_before_interest']),
-            "Dividends per Share": float(request.POST['dividends_per_share']),
-            "Total Stockholders Equity": float(request.POST['total_stockholders_equity']),
-            "Total Market Value": float(request.POST['total_market_value']),
-            "Total Revenue": float(request.POST['total_revenue']),
-            "Net Cash Flow": float(request.POST['net_cash_flow']),
-            "Total Long-Term Debt": float(request.POST['total_long_term_debt']),
-            "Total Interest and Related Expense": float(request.POST['total_interest_and_related_expense']),
-            "Sales Turnover (Net)": float(request.POST['sales_turnover_net']),
+            "cash": float(request.POST['cash']),
+            "total_inventory": float(request.POST['total_inventory']),
+            "non_current_asset": float(request.POST['non_current_asset']),
+            "current_liability": float(request.POST['current_liability']),
+            "gross_profit": float(request.POST['gross_profit']),
+            "retained_earnings": float(request.POST['retained_earnings']),
+            "earnings_before_interest": float(request.POST['earnings_before_interest']),
+            "dividends_per_share": float(request.POST['dividends_per_share']),
+            "total_stockholders_equity": float(request.POST['total_stockholders_equity']),
+            "total_market_value": float(request.POST['total_market_value']),
+            "total_revenue": float(request.POST['total_revenue']),
+            "net_cash_flow": float(request.POST['net_cash_flow']),
+            "total_long_term_debt": float(request.POST['total_long_term_debt']),
+            "total_interest_and_related_expense": float(request.POST['total_interest_and_related_expense']),
+            "sales_turnover_net": float(request.POST['sales_turnover_net']),
         }
 
         # Save the input data into the UserInput model
-        user_input = UserInput.objects.create(
-            cash=input_data["Cash"],
-            total_inventory=input_data["Total Inventory"],
-            non_current_asset=input_data["Non-Current Asset"],
-            current_liability=input_data["Current Liability"],
-            gross_profit=input_data["Gross Profit"],
-            retained_earnings=input_data["Retained Earnings"],
-            earnings_before_interest=input_data["Earnings before interest"],
-            dividends_per_share=input_data["Dividends per Share"],
-            total_stockholders_equity=input_data["Total Stockholders Equity"],
-            total_market_value=input_data["Total Market Value"],
-            total_revenue=input_data["Total Revenue"],
-            net_cash_flow=input_data["Net Cash Flow"],
-            total_long_term_debt=input_data["Total Long-Term Debt"],
-            total_interest_and_related_expense=input_data["Total Interest and Related Expense"],
-            sales_turnover_net=input_data["Sales Turnover (Net)"]
-        )
+        user_input = UserInput.objects.create(**input_data)
 
+        # Calculate financial ratios
         ratios = calculateRatios(input_data)
 
+        # Combine input data and calculated ratios
         combined_data = {**input_data, **ratios}
         features = {
-            'Cash': combined_data["Cash"],
-            'Earnings Before Interest': combined_data["Earnings before interest"],
-            'Gross Profit (Loss)': combined_data["Gross Profit"],
-            'Retained Earnings': combined_data["Retained Earnings"],
+            'Cash': combined_data["cash"],
+            'Earnings Before Interest': combined_data["earnings_before_interest"],
+            'Gross Profit (Loss)': combined_data["gross_profit"],
+            'Retained Earnings': combined_data["retained_earnings"],
             'EBTI Margin (Revenue)': combined_data["EBTI Margin"],
-            'Dividends per Share - Pay Date - Calendar': combined_data["Dividends per Share"],
-            'Total Stockholders Equity': combined_data["Total Stockholders Equity"],
-            'Total Market Value (Fiscal Years)': combined_data["Total Market Value"],
-            'Total Revenue': combined_data["Total Revenue"],
-            'Net Cash Flow': combined_data["Net Cash Flow"],
+            'Dividends per Share - Pay Date - Calendar': combined_data["dividends_per_share"],
+            'Total Stockholders Equity': combined_data["total_stockholders_equity"],
+            'Total Market Value (Fiscal Years)': combined_data["total_market_value"],
+            'Total Revenue': combined_data["total_revenue"],
+            'Net Cash Flow': combined_data["net_cash_flow"],
             'Debt to Equity Ratio': combined_data["Debt_to_Equity"],
             'Return on Asset': combined_data["Return on Asset Ratio"],
             'Interest Coverage': combined_data["Interest Coverage"],
             'Current Ratio': combined_data["Current Ratio"],
             'Return on Equity': combined_data["Return on Equity"],
-            'Quick Ratio': combined_data["Quick Ratio"]
+            'Quick Ratio': combined_data["Quick Ratio"],
         }
 
+        # Create a DataFrame for prediction
         input_df = pd.DataFrame([features])
 
+        # Predict risk rating
         risk_rating_binary = model.predict(input_df)[0]
         risk_rating = reverse_mapping.get(risk_rating_binary, "unknown")
 
-        # saving prediction results to the database
-        Prediction.objects.create(
-            user_input = user_input,
-            risk_rating = risk_rating
-        )
+        # Render prediction results
+        return render(request, 'risk_model/show_prediction.html', {
+            'prediction': risk_rating,
+            'user_input': user_input  # Pass user input for saving functionality
+        })
 
-         # return the prediction result to the user
-        return render(request, 'risk_model/show_prediction.html', {'prediction': risk_rating})
-    
-    # render input form if the request is get
-    return render(request, 'risk_model/main_page.html') 
+    # Render input form if the request method is GET
+    return render(request, 'risk_model/main_page.html')
 
 def calculateRatios(data):
-    ebti_margin = round(data["Earnings before interest"] / data["Total Revenue"], 2)
-    debt_to_equity = round(data["Total Long-Term Debt"] / data["Total Stockholders Equity"], 2)
-    return_on_asset = round(data["Earnings before interest"] / (data["Cash"] + data["Total Inventory"] + data["Non-Current Asset"]), 2)
-    interest_coverage = round(data["Total Interest and Related Expense"] / data["Earnings before interest"], 2)
-    current_ratio = round((data["Cash"] + data["Total Inventory"]) / data["Current Liability"], 2)
-    return_on_equity = round(((data["Sales Turnover (Net)"]) - (data["Total Revenue"] - data["Gross Profit"]) 
-                              - data["Total Interest and Related Expense"]) / data["Total Stockholders Equity"], 2)
-    quick_ratio = round(data["Cash"] / data["Current Liability"], 2)
+    ebti_margin = round(data["earnings_before_interest"] / data["total_revenue"], 2)
+    debt_to_equity = round(data["total_long_term_debt"] / data["total_stockholders_equity"], 2)
+    return_on_asset = round(data["earnings_before_interest"] / (data["cash"] + data["total_inventory"] + data["non_current_asset"]), 2)
+    interest_coverage = round(data["total_interest_and_related_expense"] / data["earnings_before_interest"], 2)
+    current_ratio = round((data["cash"] + data["total_inventory"]) / data["current_liability"], 2)
+    return_on_equity = round(((data["sales_turnover_net"]) - (data["total_revenue"] - data["gross_profit"]) 
+                              - data["total_interest_and_related_expense"]) / data["total_stockholders_equity"], 2)
+    quick_ratio = round(data["cash"] / data["current_liability"], 2)
 
     ratios = {
-        "EBTI Margin": ebti_margin, 
-        "Debt_to_Equity": debt_to_equity, 
+        "EBTI Margin": ebti_margin,
+        "Debt_to_Equity": debt_to_equity,
         "Return on Asset Ratio": return_on_asset,
-        "Interest Coverage": interest_coverage, 
-        "Current Ratio": current_ratio, 
-        "Return on Equity": return_on_equity, 
+        "Interest Coverage": interest_coverage,
+        "Current Ratio": current_ratio,
+        "Return on Equity": return_on_equity,
         "Quick Ratio": quick_ratio
     }
 
@@ -231,43 +224,43 @@ def admin_login(request):
 # function to provide explanation for predicted risk 
 def xgb_XAI():
     input_data = {
-             "Cash": 50000.0,  # Example: $50,000
-             "Total Inventory": 120000.0,  # Example: $120,000
-             "Non-Current Asset": 100000.0,
-             "Current Liability": 80000.0,  # Example: $80,000
-             "Gross Profit": 250000.0,  # Example: $250,000
-             "Retained Earnings": 100000.0,  # Example: $100,000
-             "Earnings before interest": 75000.0,  # Example: $75,000
-             "Dividends per Share": 2.5,  # Example: $2.50
-             "Total Stockholders Equity": 300000.0,  # Example: $300,000
-             "Total Market Value": 500000.0,  # Example: $500,000
-             "Total Revenue": 1000000.0,  # Example: $1,000,000
-             "Net Cash Flow": 150000.0,  # Example: $150,000
-             "Total Long-Term Debt": 200000.0,  # Example: $200,000
-             "Total Interest and Related Expense": 25000.0,  # Example: $25,000
-             "Sales Turnover (Net)": 900000.0,  # Example: $900,000
+        "cash": 50000.0,  # Lowercase keys
+        "total_inventory": 120000.0,
+        "non_current_asset": 100000.0,
+        "current_liability": 80000.0,
+        "gross_profit": 250000.0,
+        "retained_earnings": 100000.0,
+        "earnings_before_interest": 75000.0,
+        "dividends_per_share": 2.5,
+        "total_stockholders_equity": 300000.0,
+        "total_market_value": 500000.0,
+        "total_revenue": 1000000.0,
+        "net_cash_flow": 150000.0,
+        "total_long_term_debt": 200000.0,
+        "total_interest_and_related_expense": 25000.0,
+        "sales_turnover_net": 900000.0,
     }
 
     ratios = calculateRatios(input_data)
 
     combined_data = {**input_data, **ratios}
     features = {
-            'Cash': combined_data["Cash"],
-            'Earnings Before Interest': combined_data["Earnings before interest"],
-            'Gross Profit (Loss)': combined_data["Gross Profit"],
-            'Retained Earnings': combined_data["Retained Earnings"],
-            'EBTI Margin (Revenue)': combined_data["EBTI Margin"],
-            'Dividends per Share - Pay Date - Calendar': combined_data["Dividends per Share"],
-            'Total Stockholders Equity': combined_data["Total Stockholders Equity"],
-            'Total Market Value (Fiscal Years)': combined_data["Total Market Value"],
-            'Total Revenue': combined_data["Total Revenue"],
-            'Net Cash Flow': combined_data["Net Cash Flow"],
-            'Debt to Equity Ratio': combined_data["Debt_to_Equity"],
-            'Return on Asset': combined_data["Return on Asset Ratio"],
-            'Interest Coverage': combined_data["Interest Coverage"],
-            'Current Ratio': combined_data["Current Ratio"],
-            'Return on Equity': combined_data["Return on Equity"],
-            'Quick Ratio': combined_data["Quick Ratio"]
+        "Cash": combined_data["cash"],
+        "Earnings Before Interest": combined_data["earnings_before_interest"],
+        "Gross Profit (Loss)": combined_data["gross_profit"],
+        "Retained Earnings": combined_data["retained_earnings"],
+        "EBTI Margin (Revenue)": combined_data["EBTI Margin"],
+        "Dividends per Share - Pay Date - Calendar": combined_data["dividends_per_share"],
+        "Total Stockholders Equity": combined_data["total_stockholders_equity"],
+        "Total Market Value (Fiscal Years)": combined_data["total_market_value"],
+        "Total Revenue": combined_data["total_revenue"],
+        "Net Cash Flow": combined_data["net_cash_flow"],
+        "Debt to Equity Ratio": combined_data["Debt_to_Equity"],
+        "Return on Asset": combined_data["Return on Asset Ratio"],
+        "Interest Coverage": combined_data["Interest Coverage"],
+        "Current Ratio": combined_data["Current Ratio"],
+        "Return on Equity": combined_data["Return on Equity"],
+        "Quick Ratio": combined_data["Quick Ratio"],
     }
 
     input_df = pd.DataFrame([features])
@@ -277,24 +270,21 @@ def xgb_XAI():
 
     print(f"Predicted Risk: {reverse_mapping.get(predicted_risk[0])} \nPredicted Risk Probability: {predicted_risk_proba[0]}")
 
-    X_train = data.drop(columns=['Risk Rating'])
+    X_train = data.drop(columns=["Risk Rating"])
 
     explainer = lime.lime_tabular.LimeTabularExplainer(
-        training_data= X_train.values,
+        training_data=X_train.values,
         mode="classification",
-        class_names=['Lowest Risk', 'Low Risk', 'Medium Risk', 'High Risk', 'Highest Risk', 'In Default'],
+        class_names=["Lowest Risk", "Low Risk", "Medium Risk", "High Risk", "Highest Risk", "In Default"],
         feature_names=X_train.columns,
-        discretize_continuous=True
+        discretize_continuous=True,
     )
 
-    explanation = explainer.explain_instance(
-        input_df.values[0],
-        model.predict_proba
-    )
+    explanation = explainer.explain_instance(input_df.values[0], model.predict_proba)
 
     feature_impt = explanation.as_list()
 
-    sorted_importance = sorted(feature_impt, key=lambda x:abs(x[1]), reverse=True)
+    sorted_importance = sorted(feature_impt, key=lambda x: abs(x[1]), reverse=True)
 
     top10 = sorted_importance[:10]
     
