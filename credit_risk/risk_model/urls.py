@@ -15,4 +15,6 @@ urlpatterns = [
     path('admin_login/', views.admin_login, name='admin_login'),  # Admin login
     path('save_prediction/', views.save_prediction, name='save_prediction'),
     path("export/pdf/", views.export_to_pdf, name="export_to_pdf"),
+    path('api/predictions/', views.predictions_api, name='predictions_api'),  # API for predictions
+    path('api/predictions/<int:id>/', views.predictions_api, name='predictions_api'),
 ]

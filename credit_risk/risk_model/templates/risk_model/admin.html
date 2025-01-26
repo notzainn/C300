@@ -1,4 +1,5 @@
 {% load static %}
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,7 +9,7 @@
 
     <!-- Include DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
-
+    
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -54,77 +55,77 @@
             margin-bottom: 10px;
         }
         .container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
 
-.form-container {
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    padding: 30px;
-    margin-top: 30px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+        .form-container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
 
-h2 {
-    font-size: 24px;
-    margin-bottom: 20px;
-    color: #333;
-}
+        h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
 
-label {
-    font-size: 16px;
-    margin-bottom: 8px;
-    display: block;
-    color: #555;
-}
+        label {
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: block;
+            color: #555;
+        }
 
-input[type="text"], input[type="number"], select {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 16px;
-}
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
 
-input[type="text"]:focus, input[type="number"]:focus, select:focus {
-    border-color: #6a1b9a; /* Focus color */
-    background-color: #f0f4f9; /* Background on focus */
-}
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            border-color: #ad6fd3; /* Focus color */
+            background-color: #f0f4f9; /* Background on focus */
+        }
 
-button[type="submit"] {
-    background-color: #6a1b9a;
-    color: white;
-    padding: 12px 25px;
-    font-size: 16px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    width: 100%;
-}
+        button[type="submit"] {
+            background-color: #ad6fd3;
+            color: white;
+            padding: 12px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+        }
 
-button[type="submit"]:hover {
-    background-color: #4a148c;
-}
+        button[type="submit"]:hover {
+            background-color: #9334d2;
+        }
 
-button[type="button"] {
-    background-color: #ccc;
-    color: #333;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 16px;
-    border: none;
-    cursor: pointer;
-}
+        button[type="button"] {
+            background-color: #ccc;
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+        }
 
-button[type="button"]:hover {
-    background-color: #aaa;
-}
+        button[type="button"]:hover {
+            background-color: #aaa;
+        }
 
     </style>
 </head>
@@ -138,13 +139,14 @@ button[type="button"]:hover {
     <!-- Form to Add or Update Company -->
     <form id="companyForm">
         <label for="name">Company Name:</label>
-        <input type="text" id="name" name="name" placeholder="Enter company name" required>
+        <input type="text" id="name" name="name" placeholder="Enter company name" value="Admin" required>
 
         <label for="revenue">Total Revenue:</label>
         <input type="number" id="revenue" name="revenue" placeholder="Enter revenue" required>
 
         <label for="riskCategory">Risk Category:</label>
         <select id="riskCategory" name="riskCategory" required>
+            <option value="" selected disabled>Select Risk Category</option>
             <option value="Low Risk">Low Risk</option>
             <option value="Medium Risk">Medium Risk</option>
             <option value="High Risk">High Risk</option>
@@ -164,7 +166,19 @@ button[type="button"]:hover {
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+            {% for prediction in predictions %}
+            <tr>
+                <td>{{ prediction.name }}</td>
+                <td>{{ prediction.revenue }}</td>
+                <td>{{ prediction.risk_category }}</td>
+                <td>
+                    <button class="edit-btn" data-id="{{ prediction.id }}">Edit</button>
+                    <button class="delete-btn" data-id="{{ prediction.id }}">Delete</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
 
     <div style="margin-top: 20px; text-align: center;">
@@ -192,7 +206,7 @@ button[type="button"]:hover {
                 "autoWidth": false // Adjust column width automatically
             });
 
-            // Form submission logic (Add or update company)
+           /*  // Form submission logic (Add or update company)
             $('#companyForm').submit(function(event) {
                 event.preventDefault();
 
@@ -211,7 +225,7 @@ button[type="button"]:hover {
 
                 // Reset the form
                 $('#companyForm')[0].reset();
-            });
+            }); */
         });
     </script>
 </body>

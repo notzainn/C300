@@ -17,7 +17,6 @@ from django.urls import reverse
 from .models import Company, UserInput, Prediction  # Import models for saving User Input and predictions
 import json
 
-
 # Load trained XG boost model
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 model_path = os.path.join(BASE_DIR, 'machine_learning', 'updated_xgb_model.pkl')
@@ -59,6 +58,7 @@ def main_page(request):
 def main_page(request):
     return render(request, 'risk_model/main_page.html')
 
+from django.contrib import messages as saved_messages
 # View to handle saving of records
 def save_prediction(request):
     if request.method == "POST":
@@ -172,7 +172,22 @@ def calculateRatios(data):
     return ratios
 
 def admin_dashboard(request):
-    return render(request, 'risk_model/admin.html')  # Replace 'app_name' with your actual app name
+    # Fetch all predictions with related user input
+    predictions = Prediction.objects.select_related('user_input').all()
+
+    # Prepare the data to send to the template
+    prediction_data = [
+        {
+            'id': prediction.id,
+            'name': f"User Input {prediction.user_input.id}",
+            'revenue': prediction.user_input.total_revenue,  # Assuming total_revenue exists in UserInput
+            'risk_category': prediction.risk_rating
+        }
+        for prediction in predictions
+    ]
+
+    # Pass the predictions to the admin dashboard
+    return render(request, 'risk_model/admin.html', {'predictions': prediction_data})
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -360,3 +375,97 @@ def export_to_pdf(request):
         return HttpResponse("Error occurred while generating the PDF", status=500)
 
     return response
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Prediction, UserInput
+import json
+
+@csrf_exempt
+def predictions_api(request, id=None):
+    if request.method == 'GET':
+        try:
+            if id:  # Fetch a specific prediction by ID
+                prediction = Prediction.objects.select_related('user_input').get(id=id)
+                data = {
+                    'id': prediction.id,
+                    'name': f"User Input {prediction.user_input.id}",  # Properly formatted name
+                    'revenue': prediction.user_input.total_revenue,
+                    'risk_category': prediction.risk_rating,
+                }
+                return JsonResponse(data, safe=False)
+            else:  # Fetch all predictions
+                predictions = Prediction.objects.select_related('user_input').all()
+                data = [
+                    {
+                        'id': prediction.id,
+                        'name': f"User Input {prediction.user_input.id}",
+                        'revenue': prediction.user_input.total_revenue,
+                        'risk_category': prediction.risk_rating,
+                    }
+                    for prediction in predictions
+                ]
+                return JsonResponse(data, safe=False)
+        except Prediction.DoesNotExist:
+            return JsonResponse({'error': 'Prediction not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+
+            # Update or create UserInput
+            user_input, _ = UserInput.objects.update_or_create(
+                id=data.get('user_input_id'),
+                defaults={'total_revenue': data['revenue']}
+            )
+
+            # Update or create Prediction
+            prediction, created = Prediction.objects.update_or_create(
+                user_input=user_input,
+                defaults={'risk_rating': data['risk_category']}
+            )
+            return JsonResponse({'status': 'success', 'prediction_id': prediction.id, 'created': created})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    elif request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+
+            # Fetch the prediction object
+            prediction = Prediction.objects.get(id=id)
+
+            # Update related UserInput fields
+            user_input = prediction.user_input
+            user_input.total_revenue = body.get('revenue', user_input.total_revenue)  # Update revenue
+            user_input.save()
+
+            # Update Prediction fields
+            prediction.risk_rating = body.get('risk_category', prediction.risk_rating)
+            prediction.save()
+
+            # Prepare updated data for response
+            updated_data = {
+                'id': prediction.id,
+                'name': f"User Input {user_input.id}",
+                'revenue': user_input.total_revenue,
+                'risk_category': prediction.risk_rating,
+            }
+            return JsonResponse({'status': 'success', 'data': updated_data})
+        except Prediction.DoesNotExist:
+            return JsonResponse({'error': 'Prediction not found'}, status=404)
+        except Exception as e:
+            print("Error:", str(e))  # Log the exact error
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'DELETE':
+        try:
+            # Delete the prediction object
+            Prediction.objects.filter(id=id).delete()
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)

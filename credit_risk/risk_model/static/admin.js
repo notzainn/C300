@@ -1,116 +1,189 @@
-const apiUrl = '/risk_model/companies/';
+const apiUrl = '/risk_model/api/predictions/';
+let editMode = false; // Track whether we're editing or adding
+let currentPredictionId = null; // Store the ID of the prediction being edited
+const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-// Function to fetch and render the company table
-const renderTable = async () => {
+
+// Fetch and render predictions
+const renderPredictions = async () => {
     try {
         const response = await fetch(apiUrl, { method: 'GET' });
-        const companies = await response.json();
+        const predictions = await response.json();
 
         const tableBody = document.querySelector('#companyTable tbody');
         tableBody.innerHTML = ''; // Clear existing rows
 
-        companies.forEach(company => {
+        predictions.forEach(prediction => {
             const row = document.createElement('tr');
-
             row.innerHTML = `
-                <td>${company.name}</td>
-                <td>${company.revenue}</td>
-                <td>${company.risk_category}</td>
+                <td>${prediction.name}</td>
+                <td>${prediction.revenue}</td>
+                <td>${prediction.risk_category}</td>
                 <td>
-                    <button onclick="editCompany(${company.id})">Edit</button>
-                    <button onclick="deleteCompany(${company.id})">Delete</button>
+                    <button class="edit-btn" data-id="${prediction.id}">Edit</button>
+                    <button class="delete-btn" data-id="${prediction.id}">Delete</button>
                 </td>
             `;
-
             tableBody.appendChild(row);
         });
+
+        // Reinitialize DataTables
+        $('#companyTable').DataTable();
     } catch (error) {
-        console.error('Error fetching companies:', error);
-        alert('Failed to load company data.');
+        console.error('Error fetching predictions:', error);
     }
 };
 
-// Function to handle form submission for Create/Update
-document.getElementById('companyForm').addEventListener('submit', async event => {
+// Edit Prediction
+const editPrediction = async (id) => {
+    try {
+        const response = await fetch(`${apiUrl}${id}/`, { method: 'GET' });
+        if (!response.ok) {
+            if (response.status === 404) {
+                alert('Prediction not found.');
+                return;
+            }
+            throw new Error(`Error fetching prediction: ${response.statusText}`);
+        }
+
+        const prediction = await response.json();
+
+        // Populate the form with the prediction data
+        document.querySelector('#name').value = prediction.name || ''; // Set "User Input X"
+        document.querySelector('#revenue').value = prediction.revenue || 0;
+        document.querySelector('#riskCategory').value = prediction.risk_category || '';
+
+        editMode = true; // Enable edit mode
+        currentPredictionId = id; // Store ID for editing
+    } catch (error) {
+        console.error('Error fetching prediction:', error);
+    }
+};
+
+
+// Save or Update Prediction
+document.querySelector('#companyForm').addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const name = document.getElementById('name').value.trim();
-    const revenue = parseFloat(document.getElementById('revenue').value.trim());
-    const riskCategory = document.getElementById('riskCategory').value;
+    // const name = document.querySelector('#name').value.trim();
+    const revenue = parseFloat(document.querySelector('#revenue').value.trim());
+    const riskCategory = document.querySelector('#riskCategory').value;
 
-    if (!name || isNaN(revenue) || revenue <= 0) {
-        alert('Please provide valid inputs for the form.');
+    if (isNaN(revenue) || typeof revenue!= 'number')  {
+        alert('Please provide valid inputs.');
         return;
     }
 
-    const data = { name, revenue, riskCategory };
+    const data = {revenue, risk_category: riskCategory };
+    const url = editMode ? `${apiUrl}${currentPredictionId}/` : apiUrl;
 
     try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        const response = await fetch(url, {
+            method: editMode ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken, // Add CSRF token if required
+            },
             body: JSON.stringify(data),
         });
 
         const result = await response.json();
 
-        if (result.status === 'success') {
-            alert(result.created ? 'Company added successfully!' : 'Company updated successfully!');
-            renderTable();
-            event.target.reset(); // Clear the form
+        if (response.ok && result.status === 'success') {
+            alert(editMode ? 'Prediction updated successfully!' : 'Prediction added successfully!');
+            const updatedData = result.data;
+
+            if (!editMode) {
+                // Append the new prediction to the table
+                const tableBody = document.querySelector('#companyTable tbody');
+                const newRow = document.createElement('tr');
+                const newPrediction = result.data;
+
+                newRow.innerHTML = `
+                    <td>${newPrediction.name}</td>
+                    <td>${newPrediction.revenue}</td>
+                    <td>${newPrediction.risk_category}</td>
+                    <td>
+                        <button class="edit-btn" data-id="${newPrediction.id}">Edit</button>
+                        <button class="delete-btn" data-id="${newPrediction.id}">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(newRow);
+            } else {
+                renderPredictions(); // Refresh the table for updates
+            }
+
+            if (editMode) {
+                // Update the specific table row
+                const row = document.querySelector(`[data-id="${currentPredictionId}"]`).closest('tr');
+                row.innerHTML = `
+                    <td>${updatedData.name}</td>
+                    <td>${updatedData.revenue}</td>
+                    <td>${updatedData.risk_category}</td>
+                    <td>
+                        <button class="edit-btn" data-id="${updatedData.id}">Edit</button>
+                        <button class="delete-btn" data-id="${updatedData.id}">Delete</button>
+                    </td>
+                `;
+
+                // Reattach event listeners to the new buttons
+                row.querySelector('.edit-btn').addEventListener('click', () => editPrediction(updatedData.id));
+                row.querySelector('.delete-btn').addEventListener('click', () => deletePrediction(updatedData.id));
+            } else {
+                // Reload the entire table if a new record is added
+                renderPredictions();
+            }
+            document.querySelector('#companyForm').reset(); // Clear form
+            editMode = false; // Reset edit mode
+            currentPredictionId = null; // Clear current ID
         } else {
-            alert('An error occurred: ' + result.message);
+            throw new Error(result.message || 'An error occurred');
         }
     } catch (error) {
-        console.error('Error saving company:', error);
-        alert('Failed to save company data.');
+        console.error('Error saving prediction:', error);
     }
 });
 
-// Edit a company
-const editCompany = async id => {
-    try {
-        const response = await fetch(apiUrl, { method: 'GET' });
-        const companies = await response.json();
-        const company = companies.find(c => c.id === id);
 
-        if (company) {
-            document.getElementById('name').value = company.name;
-            document.getElementById('revenue').value = company.revenue;
-            document.getElementById('riskCategory').value = company.risk_category;
-        } else {
-            alert('Company not found.');
-        }
-    } catch (error) {
-        console.error('Error editing company:', error);
-        alert('Failed to load company data for editing.');
-    }
-};
-
-// Delete a company
-const deleteCompany = async id => {
-    if (confirm('Are you sure you want to delete this company?')) {
+// Delete Prediction
+const deletePrediction = async (id) => {
+    if (confirm('Are you sure you want to delete this prediction?')) {
         try {
-            const response = await fetch(apiUrl, {
+            const response = await fetch(`${apiUrl}${id}/`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id }),
             });
 
             const result = await response.json();
-
             if (result.status === 'success') {
-                alert('Company deleted successfully!');
-                renderTable();
+                alert('Prediction deleted successfully!');
+                const rowToDelete = document.querySelector(`button[data-id="${id}"]`).closest('tr');
+                if (rowToDelete) {
+                    rowToDelete.remove(); // Remove the row from the DOM
+                }
             } else {
-                alert('An error occurred: ' + result.message);
+                alert('Error: ' + result.message);
             }
         } catch (error) {
-            console.error('Error deleting company:', error);
-            alert('Failed to delete company.');
+            console.error('Error deleting prediction:', error);
         }
     }
 };
 
-// Initial rendering of the table
-renderTable();
+// Attach Event Handlers Dynamically
+document.querySelector('#companyTable').addEventListener('click', (event) => {
+    const target = event.target;
+
+    if (target.classList.contains('edit-btn')) {
+        const id = target.dataset.id;
+        editPrediction(id);
+    } else if (target.classList.contains('delete-btn')) {
+        const id = target.dataset.id;
+        deletePrediction(id);
+    }
+});
+
+// Initialize the page
+$(document).ready(() => {
+    renderPredictions();
+});
