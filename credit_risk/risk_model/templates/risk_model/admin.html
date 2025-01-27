@@ -14,11 +14,15 @@
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
+            background-color: rgb(147, 147, 215); /* Set the background to navy blue */
+            color: white; /* Set text color to white for better contrast */
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            background-color: #f9f9f9; /* Light background for the table */
+            color: black; /* Dark text for contrast */
         }
         table, th, td {
             border: 1px solid #ccc;
@@ -28,25 +32,39 @@
             text-align: left;
         }
         th {
-            background-color: #ad6fd3; /* Purple color for the header */
-            color: white; /* White text on the purple header */
+            background-color: white; /* Purple color for the header */
+            color: black; /* White text on the purple header */
         }
         .dataTables_wrapper .dataTables_paginate .paginate_button {
-            background-color: #ad6fd3; /* Purple color for the pagination buttons */
-            color: white;
+            background-color: white; /* Purple color for the pagination buttons */
+            color: black;
         }
         .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-            background-color: #ad6fd3; /* Darker purple on hover */
+            background-color: white; /* Darker purple on hover */
         }
         .dataTables_wrapper .dataTables_length select,
         .dataTables_wrapper .dataTables_filter input {
-            background-color: #c394e0; /* Purple background for the select and search boxes */
-            color: white;
+            background-color: white; /* Purple background for the select and search boxes */
+            color: black;
         }
         .dataTables_wrapper .dataTables_length select option,
         .dataTables_wrapper .dataTables_filter input {
             color: black;
         }
+
+        /* Styling for "Show," "Search," and "entries" text */
+        .dataTables_length label, .dataTables_filter label {
+        color: black; /* Make label text black */
+}
+
+        .dataTables_length select, .dataTables_filter input {
+        color: black; /* Input and dropdown text color */
+        background-color: white; /* Ensure a white background for inputs */
+        border: 1px solid #ccc; /* Light gray border */
+        padding: 5px;
+        border-radius: 5px;
+}
+
         form {
             margin-bottom: 20px;
         }
@@ -69,6 +87,14 @@
             padding: 30px;
             margin-top: 30px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+             color: black; /* Make the main heading black */
+        }
+
+        p {
+            color: black; /* Make the subtitle black */
         }
 
         h2 {
@@ -99,8 +125,8 @@
         }
 
         button[type="submit"] {
-            background-color: #ad6fd3;
-            color: white;
+            background-color: white;
+            color: black;
             padding: 12px 25px;
             font-size: 16px;
             border: none;
@@ -110,7 +136,7 @@
         }
 
         button[type="submit"]:hover {
-            background-color: #9334d2;
+            background-color: grey;
         }
 
         button[type="button"] {
@@ -138,13 +164,13 @@
 
     <!-- Form to Add or Update Company -->
     <form id="companyForm">
-        <label for="name">Company Name:</label>
+        <label for="name" style="color: white;" >Company Name:</label>
         <input type="text" id="name" name="name" placeholder="Enter company name" value="Admin" required>
 
-        <label for="revenue">Total Revenue:</label>
+        <label for="revenue" style="color: white;" >Total Revenue:</label>
         <input type="number" id="revenue" name="revenue" placeholder="Enter revenue" required>
 
-        <label for="riskCategory">Risk Category:</label>
+        <label for="riskCategory" style="color: white;" >Risk Category:</label>
         <select id="riskCategory" name="riskCategory" required>
             <option value="" selected disabled>Select Risk Category</option>
             <option value="Low Risk">Low Risk</option>

@@ -350,11 +350,11 @@ from xhtml2pdf import pisa
 
 def export_to_pdf(request):
     # Fetch data from the database
-    companies = Company.objects.all()  # Query all company data
+    predictions = Prediction.objects.all()  # Query all company data
 
     # Prepare context for the template
     context = {
-        "companies": companies, 
+        "predictions": predictions, 
     }
 
     # Load the HTML template
@@ -365,7 +365,7 @@ def export_to_pdf(request):
 
     # Create PDF response
     response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = 'attachment; filename="Company_Data.pdf"'
+    response["Content-Disposition"] = 'attachment; filename="Prediction_Data.pdf"'
 
     # Convert the HTML to PDF using xhtml2pdf
     pisa_status = pisa.CreatePDF(html, dest=response)

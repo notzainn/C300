@@ -25,22 +25,28 @@
     </style>
 </head>
 <body>
-    <h1>Company Data</h1>
+    <h1>Prediction Data</h1>
     <table>
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Revenue</th>
-                <th>Risk Category</th>
+                <th>ID</th>
+                <th>Risk Rating</th>
+                <th>Created At</th>
+                <th>User Input ID</th>
             </tr>
         </thead>
         <tbody>
-            {% for company in companies %}
-            <tr>
-                <td>{{ company.name }}</td>
-                <td>{{ company.revenue }}</td>
-                <td>{{ company.risk_category }}</td>
-            </tr>
+            {% for prediction in predictions %}
+                <tr>
+                    <td>{{ prediction.id }}</td>
+                    <td>{{ prediction.risk_rating }}</td>
+                    <td>{{ prediction.created_at }}</td>
+                    <td>{{ prediction.user_input_id }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">No predictions available</td>
+                </tr>
             {% endfor %}
         </tbody>
     </table>
