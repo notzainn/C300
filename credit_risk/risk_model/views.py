@@ -239,21 +239,36 @@ def admin_login(request):
 # function to provide explanation for predicted risk 
 def xgb_XAI():
     input_data = {
-        "cash": 50000.0,  # Lowercase keys
-        "total_inventory": 120000.0,
-        "non_current_asset": 100000.0,
-        "current_liability": 80000.0,
-        "gross_profit": 250000.0,
-        "retained_earnings": 100000.0,
-        "earnings_before_interest": 75000.0,
-        "dividends_per_share": 2.5,
-        "total_stockholders_equity": 300000.0,
-        "total_market_value": 500000.0,
-        "total_revenue": 1000000.0,
-        "net_cash_flow": 150000.0,
-        "total_long_term_debt": 200000.0,
-        "total_interest_and_related_expense": 25000.0,
-        "sales_turnover_net": 900000.0,
+        # "cash": 50000.0,  # Lowercase keys
+        # "total_inventory": 120000.0,
+        # "non_current_asset": 100000.0,
+        # "current_liability": 80000.0,
+        # "gross_profit": 250000.0,
+        # "retained_earnings": 100000.0,
+        # "earnings_before_interest": 75000.0,
+        # "dividends_per_share": 2.5,
+        # "total_stockholders_equity": 300000.0,
+        # "total_market_value": 500000.0,
+        # "total_revenue": 1000000.0,
+        # "net_cash_flow": 150000.0,
+        # "total_long_term_debt": 200000.0,
+        # "total_interest_and_related_expense": 25000.0,
+        # "sales_turnover_net": 900000.0,
+        "cash": 500.0,  # Very low cash reserves
+        "total_inventory": 200000.0,  # High inventory that may not be liquid
+        "non_current_asset": 300000.0,  # High fixed assets that are not easily convertible to cash
+        "current_liability": 250000.0,  # High current liabilities
+        "gross_profit": 50000.0,  # Low gross profit compared to revenue
+        "retained_earnings": -20000.0,  # Negative retained earnings indicating losses
+        "earnings_before_interest": 15000.0,  # Low earnings before interest
+        "dividends_per_share": 0.0,  # No dividend payments, possible financial stress
+        "total_stockholders_equity": 50000.0,  # Low equity
+        "total_market_value": 100000.0,  # Low valuation compared to liabilities
+        "total_revenue": 500000.0,  # Moderate revenue but low profitability
+        "net_cash_flow": -50000.0,  # Negative cash flow, indicating financial trouble
+        "total_long_term_debt": 400000.0,  # High long-term debt burden
+        "total_interest_and_related_expense": 50000.0,  # High interest payments
+        "sales_turnover_net": 400000.0,  # Slow turnover, low efficiency
     }
 
     ratios = calculateRatios(input_data)
@@ -297,6 +312,33 @@ def xgb_XAI():
 
     explanation = explainer.explain_instance(input_df.values[0], model.predict_proba)
 
+    shap_explainer = shap.Explainer(model, X_train)
+    shap_values = shap_explainer(input_df)
+
+    predicted_class = model.predict(input_df)
+    
+    shap_values_df_list = []
+    
+    for feature_idx, feature_name in enumerate(X_train.columns):
+        # Extract the SHAP values for the "Medium Risk" class (class index 2) across all instances
+        shap_values_for_feature = shap_values.values[:, predicted_class, feature_idx]
+        
+        # Calculate the average SHAP value for that feature across all instances (optional, if you want a summary)
+        avg_shap_value = shap_values_for_feature.mean()
+
+        # Store the feature and its SHAP value for "Medium Risk"
+        shap_values_df_list.append({
+            'Feature': feature_name,
+            'Average Medium Risk SHAP Value': avg_shap_value,
+            'Individual SHAP Values': shap_values_for_feature.tolist()
+        })
+
+    shap_values_df = pd.DataFrame(shap_values_df_list)
+
+    # Print the sorted SHAP values for each feature
+    shap_values_sorted = shap_values_df.sort_values(by="SHAP Values", ascending=False)
+    print(shap_values_sorted.to_dict(orient='records'))
+
     feature_impt = explanation.as_list()
 
     sorted_importance = sorted(feature_impt, key=lambda x: abs(x[1]), reverse=True)
@@ -306,10 +348,14 @@ def xgb_XAI():
     # for feature in top10:
     #     print(f"Feature Criteria: {feature[0]} \nFeature Importance: {round(feature[1],2)} \n")
 
-    reccomendation(input_df, top10)
+    bool_result = recommendation(input_df, top10)
+
+    for bool in bool_result:
+        print(bool)
 
 
-def reccomendation(input_df, feature_crit):
+def recommendation(input_df, feature_crit):
+    recommendations = []
 
     for criteria, importance in feature_crit:
         
@@ -317,28 +363,35 @@ def reccomendation(input_df, feature_crit):
         feature_re = r"([\d.+])*\s*(<=|=>|<|>)*\s*([a-zA-Z\s()-]+)\s*(<=|>=|<|>)\s*([\d.]+)"
         # split all based on matches
         matches = re.findall(feature_re, criteria)
-
-        print(matches, ", ", criteria)
         
-        condition_bool = True
+        for match in matches:
+            lower_bnd, lower_crit, feature, upper_crit, upper_bnd = match
 
-        # for condition in conditions:
-        #     if '>' in condition:
-        #         feature_name, threshold = condition.split(' > ')
-        #         operator = '>'
-        #     elif '<' in condition:
-        #         feature_name, threshold = condition.split(' < ')
-        #         operator = '<'
-        #     elif '>=' in condition:
-        #         feature_name, threshold = condition.split(' >= ')
-        #         operator = '>='
-        #     elif '<=' in condition:
-        #         feature_name, threshold = condition.split(' <= ')
-        #         operator = '<='
+            lower_bnd = float(lower_bnd) if lower_bnd else None
+            upper_bnd = float(upper_bnd) if upper_bnd else None
+
+            # Extracts the value of the feature user has inputted.
+            user_feat_value = input_df[feature.strip()].values[0]
+       
+            condition_bool = True
+
+            if lower_bnd is not None:
+                if lower_crit == '<' and  not (user_feat_value < lower_bnd):
+                    condition_bool = False
+                elif lower_crit == '<=' and  not (user_feat_value <= lower_bnd):
+                    condition_bool = False
+
+            if upper_bnd is not None:
+                if upper_crit == '>' and not (user_feat_value > upper_bnd):
+                    condition_bool = False
+                elif upper_crit == '>=' and not (user_feat_value >= upper_bnd):
+                    condition_bool = False
             
-        #     threshold = float(threshold)
+            recommendations.append(f"{feature.strip()}: {condition_bool}")
+    
+    
+    return recommendations
 
-        #     print(f"{feature_name}: {operator}")
 
 
 
