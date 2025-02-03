@@ -15,6 +15,8 @@ from django.shortcuts import render
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from .models import Company, UserInput, Prediction  # Import models for saving User Input and predictions
+from django.views.decorators.csrf import csrf_exempt
+from .models import Prediction, UserInput
 import json
 
 # Load trained XG boost model
@@ -237,139 +239,139 @@ def admin_login(request):
 
 
 # function to provide explanation for predicted risk 
-def xgb_XAI():
-    input_data = {
-        # "cash": 50000.0,  # Lowercase keys
-        # "total_inventory": 120000.0,
-        # "non_current_asset": 100000.0,
-        # "current_liability": 80000.0,
-        # "gross_profit": 250000.0,
-        # "retained_earnings": 100000.0,
-        # "earnings_before_interest": 75000.0,
-        # "dividends_per_share": 2.5,
-        # "total_stockholders_equity": 300000.0,
-        # "total_market_value": 500000.0,
-        # "total_revenue": 1000000.0,
-        # "net_cash_flow": 150000.0,
-        # "total_long_term_debt": 200000.0,
-        # "total_interest_and_related_expense": 25000.0,
-        # "sales_turnover_net": 900000.0,
-        "cash": 500.0,  # Very low cash reserves
-        "total_inventory": 200000.0,  # High inventory that may not be liquid
-        "non_current_asset": 300000.0,  # High fixed assets that are not easily convertible to cash
-        "current_liability": 250000.0,  # High current liabilities
-        "gross_profit": 50000.0,  # Low gross profit compared to revenue
-        "retained_earnings": -20000.0,  # Negative retained earnings indicating losses
-        "earnings_before_interest": 15000.0,  # Low earnings before interest
-        "dividends_per_share": 0.0,  # No dividend payments, possible financial stress
-        "total_stockholders_equity": 50000.0,  # Low equity
-        "total_market_value": 100000.0,  # Low valuation compared to liabilities
-        "total_revenue": 500000.0,  # Moderate revenue but low profitability
-        "net_cash_flow": -50000.0,  # Negative cash flow, indicating financial trouble
-        "total_long_term_debt": 400000.0,  # High long-term debt burden
-        "total_interest_and_related_expense": 50000.0,  # High interest payments
-        "sales_turnover_net": 400000.0,  # Slow turnover, low efficiency
-    }
+# def xgb_XAI():
+#     input_data = {
+#         "cash": 50000.0,  # Lowercase keys
+#         "total_inventory": 120000.0,
+#         "non_current_asset": 100000.0,
+#         "current_liability": 80000.0,
+#         "gross_profit": 250000.0,
+#         "retained_earnings": 100000.0,
+#         "earnings_before_interest": 75000.0,
+#         "dividends_per_share": 2.5,
+#         "total_stockholders_equity": 300000.0,
+#         "total_market_value": 500000.0,
+#         "total_revenue": 1000000.0,
+#         "net_cash_flow": 150000.0,
+#         "total_long_term_debt": 200000.0,
+#         "total_interest_and_related_expense": 25000.0,
+#         "sales_turnover_net": 900000.0,
+#         "cash": 500.0,  # Very low cash reserves
+#         "total_inventory": 200000.0,  # High inventory that may not be liquid
+#         "non_current_asset": 300000.0,  # High fixed assets that are not easily convertible to cash
+#         "current_liability": 250000.0,  # High current liabilities
+#         "gross_profit": 50000.0,  # Low gross profit compared to revenue
+#         "retained_earnings": -20000.0,  # Negative retained earnings indicating losses
+#         "earnings_before_interest": 15000.0,  # Low earnings before interest
+#         "dividends_per_share": 0.0,  # No dividend payments, possible financial stress
+#         "total_stockholders_equity": 50000.0,  # Low equity
+#         "total_market_value": 100000.0,  # Low valuation compared to liabilities
+#         "total_revenue": 500000.0,  # Moderate revenue but low profitability
+#         "net_cash_flow": -50000.0,  # Negative cash flow, indicating financial trouble
+#         "total_long_term_debt": 400000.0,  # High long-term debt burden
+#         "total_interest_and_related_expense": 50000.0,  # High interest payments
+#         "sales_turnover_net": 400000.0,  # Slow turnover, low efficiency
+#     }
 
-    ratios = calculateRatios(input_data)
+#     ratios = calculateRatios(input_data)
 
-    combined_data = {**input_data, **ratios}
-    features = {
-        "Cash": combined_data["cash"],
-        "Earnings Before Interest": combined_data["earnings_before_interest"],
-        "Gross Profit (Loss)": combined_data["gross_profit"],
-        "Retained Earnings": combined_data["retained_earnings"],
-        "EBTI Margin (Revenue)": combined_data["EBTI Margin"],
-        "Dividends per Share - Pay Date - Calendar": combined_data["dividends_per_share"],
-        "Total Stockholders Equity": combined_data["total_stockholders_equity"],
-        "Total Market Value (Fiscal Years)": combined_data["total_market_value"],
-        "Total Revenue": combined_data["total_revenue"],
-        "Net Cash Flow": combined_data["net_cash_flow"],
-        "Debt to Equity Ratio": combined_data["Debt_to_Equity"],
-        "Return on Asset": combined_data["Return on Asset Ratio"],
-        "Interest Coverage": combined_data["Interest Coverage"],
-        "Current Ratio": combined_data["Current Ratio"],
-        "Return on Equity": combined_data["Return on Equity"],
-        "Quick Ratio": combined_data["Quick Ratio"],
-    }
+#     combined_data = {**input_data, **ratios}
+#     features = {
+#         "Cash": combined_data["cash"],
+#         "Earnings Before Interest": combined_data["earnings_before_interest"],
+#         "Gross Profit (Loss)": combined_data["gross_profit"],
+#         "Retained Earnings": combined_data["retained_earnings"],
+#         "EBTI Margin (Revenue)": combined_data["EBTI Margin"],
+#         "Dividends per Share - Pay Date - Calendar": combined_data["dividends_per_share"],
+#         "Total Stockholders Equity": combined_data["total_stockholders_equity"],
+#         "Total Market Value (Fiscal Years)": combined_data["total_market_value"],
+#         "Total Revenue": combined_data["total_revenue"],
+#         "Net Cash Flow": combined_data["net_cash_flow"],
+#         "Debt to Equity Ratio": combined_data["Debt_to_Equity"],
+#         "Return on Asset": combined_data["Return on Asset Ratio"],
+#         "Interest Coverage": combined_data["Interest Coverage"],
+#         "Current Ratio": combined_data["Current Ratio"],
+#         "Return on Equity": combined_data["Return on Equity"],
+#         "Quick Ratio": combined_data["Quick Ratio"],
+#     }
 
-    input_df = pd.DataFrame([features])
+#     input_df = pd.DataFrame([features])
 
-    predicted_risk = model.predict(input_df)
-    predicted_risk_proba = model.predict_proba(input_df)[:, 1]
+#     predicted_risk = model.predict(input_df)
+#     predicted_risk_proba = model.predict_proba(input_df)[:, 1]
 
-    print(f"Predicted Risk: {reverse_mapping.get(predicted_risk[0])} \nPredicted Risk Probability: {predicted_risk_proba[0]}")
+#     print(f"Predicted Risk: {reverse_mapping.get(predicted_risk[0])} \nPredicted Risk Probability: {predicted_risk_proba[0]}")
 
-    X_train = data.drop(columns=["Risk Rating"])
+#     X_train = data.drop(columns=["Risk Rating"])
 
-    explainer = lime.lime_tabular.LimeTabularExplainer(
-        training_data=X_train.values,
-        mode="classification",
-        class_names=["Lowest Risk", "Low Risk", "Medium Risk", "High Risk", "Highest Risk", "In Default"],
-        feature_names=X_train.columns,
-        discretize_continuous=True,
-    )
+#     explainer = lime.lime_tabular.LimeTabularExplainer(
+#         training_data=X_train.values,
+#         mode="classification",
+#         class_names=["Lowest Risk", "Low Risk", "Medium Risk", "High Risk", "Highest Risk", "In Default"],
+#         feature_names=X_train.columns,
+#         discretize_continuous=True,
+#     )
 
-    explanation = explainer.explain_instance(input_df.values[0], model.predict_proba)
+#     explanation = explainer.explain_instance(input_df.values[0], model.predict_proba)
 
-    shap_explainer = shap.Explainer(model, X_train)
-    shap_values = shap_explainer(input_df)
+#     shap_explainer = shap.Explainer(model, X_train)
+#     shap_values = shap_explainer(input_df)
 
-    predicted_class = model.predict(input_df)
+#     predicted_class = model.predict(input_df)
     
-    shap_values_df_list = []
+#     shap_values_df_list = []
     
-    for feature_idx, feature_name in enumerate(X_train.columns):
-        # Extract the SHAP values for the "Medium Risk" class (class index 2) across all instances
-        shap_values_for_feature = shap_values.values[:, predicted_class, feature_idx]
+#     for feature_idx, feature_name in enumerate(X_train.columns):
+#         Extract the SHAP values for the "Medium Risk" class (class index 2) across all instances
+#         shap_values_for_feature = shap_values.values[:, predicted_class, feature_idx]
         
-        # Calculate the average SHAP value for that feature across all instances (optional, if you want a summary)
-        avg_shap_value = shap_values_for_feature.mean()
+#         Calculate the average SHAP value for that feature across all instances (optional, if you want a summary)
+#         avg_shap_value = shap_values_for_feature.mean()
 
-        # Store the feature and its SHAP value for "Medium Risk"
-        shap_values_df_list.append({
-            'Feature': feature_name,
-            'Average Medium Risk SHAP Value': avg_shap_value,
-            'Individual SHAP Values': shap_values_for_feature.tolist()
-        })
+#         Store the feature and its SHAP value for "Medium Risk"
+#         shap_values_df_list.append({
+#             'Feature': feature_name,
+#             'Average Medium Risk SHAP Value': avg_shap_value,
+#             'Individual SHAP Values': shap_values_for_feature.tolist()
+#         })
 
-    shap_values_df = pd.DataFrame(shap_values_df_list)
+#     shap_values_df = pd.DataFrame(shap_values_df_list)
 
-    # Print the sorted SHAP values for each feature
-    shap_values_sorted = shap_values_df.sort_values(by="SHAP Values", ascending=False)
-    print(shap_values_sorted.to_dict(orient='records'))
+#     Print the sorted SHAP values for each feature
+#     shap_values_sorted = shap_values_df.sort_values(by="SHAP Values", ascending=False)
+#     print(shap_values_sorted.to_dict(orient='records'))
 
-    feature_impt = explanation.as_list()
+#     feature_impt = explanation.as_list()
 
-    sorted_importance = sorted(feature_impt, key=lambda x: abs(x[1]), reverse=True)
+#     sorted_importance = sorted(feature_impt, key=lambda x: abs(x[1]), reverse=True)
 
-    top10 = sorted_importance[:10]
+#     top10 = sorted_importance[:10]
     
-    # for feature in top10:
-    #     print(f"Feature Criteria: {feature[0]} \nFeature Importance: {round(feature[1],2)} \n")
+#     for feature in top10:
+#         print(f"Feature Criteria: {feature[0]} \nFeature Importance: {round(feature[1],2)} \n")
 
-    bool_result = recommendation(input_df, top10)
+#     bool_result = recommendation(input_df, top10)
 
-    for bool in bool_result:
-        print(bool)
+#     for bool in bool_result:
+#         print(bool)
 
+# xgb_XAI()
 
 def recommendation(input_df, feature_crit):
     recommendations = []
 
-    for criteria, importance in feature_crit:
+    for criteria in feature_crit:
         
         # regular expression to identify criterias
         feature_re = r"([\d.+])*\s*(<=|=>|<|>)*\s*([a-zA-Z\s()-]+)\s*(<=|>=|<|>)\s*([\d.]+)"
         # split all based on matches
         matches = re.findall(feature_re, criteria)
-        
+       
         for match in matches:
             lower_bnd, lower_crit, feature, upper_crit, upper_bnd = match
 
             lower_bnd = float(lower_bnd) if lower_bnd else None
             upper_bnd = float(upper_bnd) if upper_bnd else None
-
             # Extracts the value of the feature user has inputted.
             user_feat_value = input_df[feature.strip()].values[0]
        
@@ -393,9 +395,6 @@ def recommendation(input_df, feature_crit):
     return recommendations
 
 
-
-
-xgb_XAI()
 
 from django.http import HttpResponse
 from django.template.loader import get_template
@@ -428,11 +427,6 @@ def export_to_pdf(request):
         return HttpResponse("Error occurred while generating the PDF", status=500)
 
     return response
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import Prediction, UserInput
-import json
 
 @csrf_exempt
 def predictions_api(request, id=None):
