@@ -237,164 +237,100 @@ def admin_login(request):
         return JsonResponse({'success': False})
     return JsonResponse({'error': 'Invalid method'}, status=400)
 
-
 # function to provide explanation for predicted risk 
-# def xgb_XAI():
-#     input_data = {
-#         "cash": 50000.0,  # Lowercase keys
-#         "total_inventory": 120000.0,
-#         "non_current_asset": 100000.0,
-#         "current_liability": 80000.0,
-#         "gross_profit": 250000.0,
-#         "retained_earnings": 100000.0,
-#         "earnings_before_interest": 75000.0,
-#         "dividends_per_share": 2.5,
-#         "total_stockholders_equity": 300000.0,
-#         "total_market_value": 500000.0,
-#         "total_revenue": 1000000.0,
-#         "net_cash_flow": 150000.0,
-#         "total_long_term_debt": 200000.0,
-#         "total_interest_and_related_expense": 25000.0,
-#         "sales_turnover_net": 900000.0,
-#         "cash": 500.0,  # Very low cash reserves
-#         "total_inventory": 200000.0,  # High inventory that may not be liquid
-#         "non_current_asset": 300000.0,  # High fixed assets that are not easily convertible to cash
-#         "current_liability": 250000.0,  # High current liabilities
-#         "gross_profit": 50000.0,  # Low gross profit compared to revenue
-#         "retained_earnings": -20000.0,  # Negative retained earnings indicating losses
-#         "earnings_before_interest": 15000.0,  # Low earnings before interest
-#         "dividends_per_share": 0.0,  # No dividend payments, possible financial stress
-#         "total_stockholders_equity": 50000.0,  # Low equity
-#         "total_market_value": 100000.0,  # Low valuation compared to liabilities
-#         "total_revenue": 500000.0,  # Moderate revenue but low profitability
-#         "net_cash_flow": -50000.0,  # Negative cash flow, indicating financial trouble
-#         "total_long_term_debt": 400000.0,  # High long-term debt burden
-#         "total_interest_and_related_expense": 50000.0,  # High interest payments
-#         "sales_turnover_net": 400000.0,  # Slow turnover, low efficiency
-#     }
-
-#     ratios = calculateRatios(input_data)
-
-#     combined_data = {**input_data, **ratios}
-#     features = {
-#         "Cash": combined_data["cash"],
-#         "Earnings Before Interest": combined_data["earnings_before_interest"],
-#         "Gross Profit (Loss)": combined_data["gross_profit"],
-#         "Retained Earnings": combined_data["retained_earnings"],
-#         "EBTI Margin (Revenue)": combined_data["EBTI Margin"],
-#         "Dividends per Share - Pay Date - Calendar": combined_data["dividends_per_share"],
-#         "Total Stockholders Equity": combined_data["total_stockholders_equity"],
-#         "Total Market Value (Fiscal Years)": combined_data["total_market_value"],
-#         "Total Revenue": combined_data["total_revenue"],
-#         "Net Cash Flow": combined_data["net_cash_flow"],
-#         "Debt to Equity Ratio": combined_data["Debt_to_Equity"],
-#         "Return on Asset": combined_data["Return on Asset Ratio"],
-#         "Interest Coverage": combined_data["Interest Coverage"],
-#         "Current Ratio": combined_data["Current Ratio"],
-#         "Return on Equity": combined_data["Return on Equity"],
-#         "Quick Ratio": combined_data["Quick Ratio"],
-#     }
-
-#     input_df = pd.DataFrame([features])
-
-#     predicted_risk = model.predict(input_df)
-#     predicted_risk_proba = model.predict_proba(input_df)[:, 1]
-
-#     print(f"Predicted Risk: {reverse_mapping.get(predicted_risk[0])} \nPredicted Risk Probability: {predicted_risk_proba[0]}")
-
-#     X_train = data.drop(columns=["Risk Rating"])
-
-#     explainer = lime.lime_tabular.LimeTabularExplainer(
-#         training_data=X_train.values,
-#         mode="classification",
-#         class_names=["Lowest Risk", "Low Risk", "Medium Risk", "High Risk", "Highest Risk", "In Default"],
-#         feature_names=X_train.columns,
-#         discretize_continuous=True,
-#     )
-
-#     explanation = explainer.explain_instance(input_df.values[0], model.predict_proba)
-
-#     shap_explainer = shap.Explainer(model, X_train)
-#     shap_values = shap_explainer(input_df)
-
-#     predicted_class = model.predict(input_df)
+def XGB_XAI():
+    input_data = {
+        "cash": 50000.0,  # Lowercase keys
+        "total_inventory": 120000.0,
+        "non_current_asset": 100000.0,
+        "current_liability": 80000.0,
+        "gross_profit": 250000.0,
+        "retained_earnings": 100000.0,
+        "earnings_before_interest": 75000.0,
+        "dividends_per_share": 2.5,
+        "total_stockholders_equity": 300000.0,
+        "total_market_value": 500000.0,
+        "total_revenue": 1000000.0,
+        "net_cash_flow": 150000.0,
+        "total_long_term_debt": 200000.0,
+        "total_interest_and_related_expense": 25000.0,
+        "sales_turnover_net": 900000.0,
+        # "cash": 500.0,  # Very low cash reserves
+        # "total_inventory": 200000.0,  # High inventory that may not be liquid
+        # "non_current_asset": 300000.0,  # High fixed assets that are not easily convertible to cash
+        # "current_liability": 250000.0,  # High current liabilities
+        # "gross_profit": 50000.0,  # Low gross profit compared to revenue
+        # "retained_earnings": -20000.0,  # Negative retained earnings indicating losses
+        # "earnings_before_interest": 15000.0,  # Low earnings before interest
+        # "dividends_per_share": 0.0,  # No dividend payments, possible financial stress
+        # "total_stockholders_equity": 50000.0,  # Low equity
+        # "total_market_value": 100000.0,  # Low valuation compared to liabilities
+        # "total_revenue": 500000.0,  # Moderate revenue but low profitability
+        # "net_cash_flow": -50000.0,  # Negative cash flow, indicating financial trouble
+        # "total_long_term_debt": 400000.0,  # High long-term debt burden
+        # "total_interest_and_related_expense": 50000.0,  # High interest payments
+        # "sales_turnover_net": 400000.0,  # Slow turnover, low efficiency
+    }
     
-#     shap_values_df_list = []
+    ratios = calculateRatios(input_data)
     
-#     for feature_idx, feature_name in enumerate(X_train.columns):
-#         Extract the SHAP values for the "Medium Risk" class (class index 2) across all instances
-#         shap_values_for_feature = shap_values.values[:, predicted_class, feature_idx]
-        
-#         Calculate the average SHAP value for that feature across all instances (optional, if you want a summary)
-#         avg_shap_value = shap_values_for_feature.mean()
-
-#         Store the feature and its SHAP value for "Medium Risk"
-#         shap_values_df_list.append({
-#             'Feature': feature_name,
-#             'Average Medium Risk SHAP Value': avg_shap_value,
-#             'Individual SHAP Values': shap_values_for_feature.tolist()
-#         })
-
-#     shap_values_df = pd.DataFrame(shap_values_df_list)
-
-#     Print the sorted SHAP values for each feature
-#     shap_values_sorted = shap_values_df.sort_values(by="SHAP Values", ascending=False)
-#     print(shap_values_sorted.to_dict(orient='records'))
-
-#     feature_impt = explanation.as_list()
-
-#     sorted_importance = sorted(feature_impt, key=lambda x: abs(x[1]), reverse=True)
-
-#     top10 = sorted_importance[:10]
+    combined_data = {**input_data, **ratios}
     
-#     for feature in top10:
-#         print(f"Feature Criteria: {feature[0]} \nFeature Importance: {round(feature[1],2)} \n")
+    features = {
+        "Cash": combined_data["cash"],
+        "Earnings Before Interest": combined_data["earnings_before_interest"],
+        "Gross Profit (Loss)": combined_data["gross_profit"],
+        "Retained Earnings": combined_data["retained_earnings"],
+        "EBTI Margin (Revenue)": combined_data["EBTI Margin"],
+        "Dividends per Share - Pay Date - Calendar": combined_data["dividends_per_share"],
+        "Total Stockholders Equity": combined_data["total_stockholders_equity"],
+        "Total Market Value (Fiscal Years)": combined_data["total_market_value"],
+        "Total Revenue": combined_data["total_revenue"],
+        "Net Cash Flow": combined_data["net_cash_flow"],
+        "Debt to Equity Ratio": combined_data["Debt_to_Equity"],
+        "Return on Asset": combined_data["Return on Asset Ratio"],
+        "Interest Coverage": combined_data["Interest Coverage"],
+        "Current Ratio": combined_data["Current Ratio"],
+        "Return on Equity": combined_data["Return on Equity"],
+        "Quick Ratio": combined_data["Quick Ratio"],
+    }
 
-#     bool_result = recommendation(input_df, top10)
+    input_df = pd.DataFrame([features])
 
-#     for bool in bool_result:
-#         print(bool)
+    predicted_risk_binary = model.predict(input_df)[0]
+    predicted_risk_rating = reverse_mapping.get(predicted_risk_binary)
 
-# xgb_XAI()
+    #predicted_risk_proba = model.predict_proba(input_df)[:, 1]
 
-def recommendation(input_df, feature_crit):
-    recommendations = []
+    X_train = data.drop(columns=["Risk Rating"])
+    feature_name = X_train.columns
 
-    for criteria in feature_crit:
-        
-        # regular expression to identify criterias
-        feature_re = r"([\d.+])*\s*(<=|=>|<|>)*\s*([a-zA-Z\s()-]+)\s*(<=|>=|<|>)\s*([\d.]+)"
-        # split all based on matches
-        matches = re.findall(feature_re, criteria)
-       
-        for match in matches:
-            lower_bnd, lower_crit, feature, upper_crit, upper_bnd = match
+    # XAI using SHAP
+    shap_explainer = shap.TreeExplainer(model, feature_perturbation='tree_path_dependent')
 
-            lower_bnd = float(lower_bnd) if lower_bnd else None
-            upper_bnd = float(upper_bnd) if upper_bnd else None
-            # Extracts the value of the feature user has inputted.
-            user_feat_value = input_df[feature.strip()].values[0]
-       
-            condition_bool = True
+    # Create mean shap value using our dataset to be used for comparing
+    shap_values = shap_explainer.shap_values(X_train)
+    shap_values_mean = np.mean(shap_values, axis=0)
 
-            if lower_bnd is not None:
-                if lower_crit == '<' and  not (user_feat_value < lower_bnd):
-                    condition_bool = False
-                elif lower_crit == '<=' and  not (user_feat_value <= lower_bnd):
-                    condition_bool = False
-
-            if upper_bnd is not None:
-                if upper_crit == '>' and not (user_feat_value > upper_bnd):
-                    condition_bool = False
-                elif upper_crit == '>=' and not (user_feat_value >= upper_bnd):
-                    condition_bool = False
-            
-            recommendations.append(f"{feature.strip()}: {condition_bool}")
+    # Create a shap value for our user's input
+    shap_values_input = shap_explainer.shap_values(input_df)
     
-    
-    return recommendations
+    shap_df = pd.DataFrame({
+        "Feature": feature_name,
+        f"SHAP VALUE ({predicted_risk_rating})": shap_values_input[0, :, predicted_risk_binary],
+        "SHAP VALUES (Mean)": shap_values_mean[:, predicted_risk_binary]
+    }).sort_values(by=f"SHAP VALUE ({predicted_risk_rating})" , ascending=False)
+
+    recommend_improv(shap_df)
 
 
+def recommend_improv(shap_df):
+
+    for feature_name, shap_val in enumerate(shap_df.values):
+        print(feature_name, shap_val)
+
+
+XGB_XAI()
 
 from django.http import HttpResponse
 from django.template.loader import get_template
@@ -463,42 +399,6 @@ def predictions_api(request, id=None):
             data = json.loads(request.body)
 
             # Update or create UserInput
-            company_name = "Admin"
-            revenue = request.POST.get("revenue")
-            risk_category = request.POST.get("riskCategory")
-
-            # If request body contains JSON data
-            try:
-                data = json.loads(request.body)
-                company_name = data.get("name", company_name)
-                revenue = data.get("revenue", revenue)
-                risk_category = data.get("riskCategory", risk_category)
-            except json.JSONDecodeError:
-                pass
-
-            # Create or update UserInput
-            user_input, _ = UserInput.objects.update_or_create(
-                id=data.get('user_input_id') if 'user_input_id' in data else None,
-                defaults={
-                    'cash': 0.0,  # Set optional fields to None if not provided
-                    'total_inventory': 0.0,
-                    'non_current_asset': 0.0,
-                    'current_liability': 0.0,
-                    'gross_profit': 0.0,
-                    'retained_earnings': 0.0,
-                    'total_revenue': revenue,  # Save revenue only
-                    'earnings_before_interest' : 0.0,
-                    'dividends_per_share' : 0.0,
-                    'total_stockholders_equity': 0.0,
-                    'total_market_value' : 0.0,
-                    'net_cash_flow': 0.0,
-                    'total_long_term_debt' : 0.0,
-                    'total_interest_and_related_expense': 0.0,
-                    'sales_turnover_net' : 0.0
-                }
-            )
-
-            # Update or create UserInput
             user_input, _ = UserInput.objects.update_or_create(
                 id=data.get('user_input_id'),
                 defaults={'total_revenue': data['revenue']}
@@ -512,8 +412,6 @@ def predictions_api(request, id=None):
             return JsonResponse({'status': 'success', 'prediction_id': prediction.id, 'created': created})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-
 
     elif request.method == 'PUT':
         try:
