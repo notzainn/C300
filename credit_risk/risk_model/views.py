@@ -463,6 +463,42 @@ def predictions_api(request, id=None):
             data = json.loads(request.body)
 
             # Update or create UserInput
+            company_name = "Admin"
+            revenue = request.POST.get("revenue")
+            risk_category = request.POST.get("riskCategory")
+
+            # If request body contains JSON data
+            try:
+                data = json.loads(request.body)
+                company_name = data.get("name", company_name)
+                revenue = data.get("revenue", revenue)
+                risk_category = data.get("riskCategory", risk_category)
+            except json.JSONDecodeError:
+                pass
+
+            # Create or update UserInput
+            user_input, _ = UserInput.objects.update_or_create(
+                id=data.get('user_input_id') if 'user_input_id' in data else None,
+                defaults={
+                    'cash': 0.0,  # Set optional fields to None if not provided
+                    'total_inventory': 0.0,
+                    'non_current_asset': 0.0,
+                    'current_liability': 0.0,
+                    'gross_profit': 0.0,
+                    'retained_earnings': 0.0,
+                    'total_revenue': revenue,  # Save revenue only
+                    'earnings_before_interest' : 0.0,
+                    'dividends_per_share' : 0.0,
+                    'total_stockholders_equity': 0.0,
+                    'total_market_value' : 0.0,
+                    'net_cash_flow': 0.0,
+                    'total_long_term_debt' : 0.0,
+                    'total_interest_and_related_expense': 0.0,
+                    'sales_turnover_net' : 0.0
+                }
+            )
+
+            # Update or create UserInput
             user_input, _ = UserInput.objects.update_or_create(
                 id=data.get('user_input_id'),
                 defaults={'total_revenue': data['revenue']}
@@ -476,6 +512,8 @@ def predictions_api(request, id=None):
             return JsonResponse({'status': 'success', 'prediction_id': prediction.id, 'created': created})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
 
     elif request.method == 'PUT':
         try:

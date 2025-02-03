@@ -74,7 +74,24 @@ document.querySelector('#companyForm').addEventListener('submit', async (event) 
         return;
     }
 
-    const data = {revenue, risk_category: riskCategory };
+    const company_name = "Admin";
+
+    const data = {
+        cash: 0.0, 
+                    total_inventory: 0.0,
+                    non_current_asset: 0.0,
+                    current_liability: 0.0,
+                    gross_profit: 0.0,
+                    retained_earnings: 0.0, 
+                    earnings_before_interest : 0.0,
+                    dividends_per_share : 0.0,
+                    total_stockholders_equity: 0.0,
+                    total_market_value : 0.0,
+                    net_cash_flow: 0.0,
+                    total_long_term_debt : 0.0,
+                    total_interest_and_related_expense: 0.0,
+                    sales_turnover_net : 0.0,
+        revenue, risk_category: riskCategory };
     const url = editMode ? `${apiUrl}${currentPredictionId}/` : apiUrl;
 
     try {
