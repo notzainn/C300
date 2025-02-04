@@ -452,3 +452,65 @@ def predictions_api(request, id=None):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def new_form_view(request):
+    if request.method == 'POST':
+        try:
+            # Debugging: Print all received POST data
+            print("POST Data:", request.POST)
+
+            # Extract and validate input data
+            cash = float(request.POST.get('cash', '0').strip())
+            total_inventory = float(request.POST.get('total_inventory', '0').strip())
+            non_current_asset = float(request.POST.get('non_current_asset', '0').strip())
+            current_liability = float(request.POST.get('current_liability', '0').strip())
+            gross_profit = float(request.POST.get('gross_profit', '0').strip())
+            retained_earnings = float(request.POST.get('retained_earnings', '0').strip())
+            earnings_before_interest = float(request.POST.get('earnings_before_interest', '0').strip())
+            dividends_per_share = float(request.POST.get('dividends_per_share', '0').strip())
+            total_stockholders_equity = float(request.POST.get('total_stockholders_equity', '0').strip())
+            total_market_value = float(request.POST.get('total_market_value', '0').strip())
+            total_revenue = float(request.POST.get('total_revenue', '0').strip())
+            net_cash_flow = float(request.POST.get('net_cash_flow', '0').strip())
+            total_long_term_debt = float(request.POST.get('total_long_term_debt', '0').strip())
+            total_interest_and_related_expense = float(request.POST.get('total_interest_and_related_expense', '0').strip())
+            sales_turnover_net = float(request.POST.get('sales_turnover_net', '0').strip())
+            risk_category = request.POST.get('riskCategory', '').strip()  # Risk category remains as a string
+
+            # Save user input data
+            user_input = UserInput.objects.create(
+                cash=cash,
+                total_inventory=total_inventory,
+                non_current_asset=non_current_asset,
+                current_liability=current_liability,
+                gross_profit=gross_profit,
+                retained_earnings=retained_earnings,
+                earnings_before_interest=earnings_before_interest,
+                dividends_per_share=dividends_per_share,
+                total_stockholders_equity=total_stockholders_equity,
+                total_market_value=total_market_value,
+                total_revenue=total_revenue,
+                net_cash_flow=net_cash_flow,
+                total_long_term_debt=total_long_term_debt,
+                total_interest_and_related_expense=total_interest_and_related_expense,
+                sales_turnover_net=sales_turnover_net,
+            )
+
+            # Save prediction data
+            Prediction.objects.create(
+                user_input=user_input,
+                risk_rating=risk_category
+            )
+
+            print(request, "Record successfully saved.")
+        
+            return redirect(('admin_dashboard'))
+
+
+        except Exception as e:
+            # Log error and show an error message
+            print(f"Error saving data: {e}")
+            return render(request, 'risk_model/new_form.html', {'error': 'Failed to save data. Please try again.'})
+
+    return render(request, 'risk_model/new_form.html')

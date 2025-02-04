@@ -17,4 +17,7 @@ urlpatterns = [
     path("export/pdf/", views.export_to_pdf, name="export_to_pdf"),
     path('api/predictions/', views.predictions_api, name='predictions_api'),  # API for predictions
     path('api/predictions/<int:id>/', views.predictions_api, name='predictions_api'),
+    path('new_form/', views.new_form_view, name='new_form_page'),
+    path('admin_dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('new_form/admin.html', views.admin_dashboard, name='admin_html'),
 ]
