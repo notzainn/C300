@@ -18,6 +18,11 @@ from .models import Company, UserInput, Prediction  # Import models for saving U
 from django.views.decorators.csrf import csrf_exempt
 from .models import Prediction, UserInput
 import json
+from django.contrib import messages
+from django.contrib.auth.models import User
+from .models import CustomUser
+from django.contrib.auth import login, logout
+
 
 # Load trained XG boost model
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -53,12 +58,79 @@ data = load_data()
 def dummy_view(request):
     return render(request, 'risk_model/dummy.html')
 
+# Main page view with role-based visibility
 def main_page(request):
+    user = request.session.get('username')
+    role = request.session.get('role')
+    return render(request, 'risk_model/main_page.html', {'user': user, 'role': role})
+
+# admin or no admin
+def toggle_admin(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    if user != request.user:  # Prevent admin from modifying themselves
+        user.is_staff = not user.is_staff
+        user.save()
+        messages.success(request, f"User '{user.username}' admin status updated.")
+    else:
+        messages.error(request, "You cannot modify your own admin status.")
+    return redirect('manage_users')
+
+# Manage Users view
+def manage_users(request):
+    if not request.session.get('role') == 'Admin':  # Ensure only Admin can access
+        return redirect('main_page')
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        role = request.POST.get('role', 'Default')
+
+        # Validate password length
+        if len(password) != 6 or not password.isdigit():
+            messages.error(request, "Password must be exactly 6 digits.")
+            return redirect('manage_users')
+
+        # Create a new user
+        CustomUser.objects.create(username=username, password=password, role=role)
+        messages.success(request, f"User '{username}' added successfully.")
+        return redirect('manage_users')
+
+    # Fetch all users
+    users = CustomUser.objects.all()
+    return render(request, 'risk_model/manage_users.html', {'users': users})
+
+# User login view
+def user_login(request):
+    # 🔹 Prevent logged-in users from accessing the login page
+    if 'user_id' in request.session:
+        return redirect('main_page') # Redirect to Credit Risk Form if already logged in
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        try:
+            # Authenticate user from the CustomUser table
+            user = CustomUser.objects.get(username=username, password=password)
+            request.session['user_id'] = user.user_id
+            request.session['username'] = user.username
+            request.session['role'] = user.role
+            messages.success(request, f"Welcome, {user.username}!")
+
+            return redirect('credit_rating_form')  # Redirect ALL users to Credit Risk Form
+
+        except CustomUser.DoesNotExist:
+            messages.error(request, "Invalid username or password.")
+            return redirect('user_login')
+
     return render(request, 'risk_model/main_page.html')
 
-# View to handle saving of records
-def main_page(request):
-    return render(request, 'risk_model/main_page.html')
+# User logout view
+def user_logout(request):
+    request.session.flush()  # 🔹 Clear session data
+    messages.success(request, "You have been logged out.")
+    return redirect('main_page')
+
 
 from django.contrib import messages as saved_messages
 # View to handle saving of records
@@ -86,7 +158,7 @@ def save_prediction(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
-# View to handle form submissions and make predictions
+# Predict Risk View
 def predict_risk(request):
     if request.method == "POST":
         # Input data mapped to match the UserInput model fields
@@ -108,8 +180,25 @@ def predict_risk(request):
             "sales_turnover_net": float(request.POST['sales_turnover_net']),
         }
 
-        # Save the input data into the UserInput model
-        user_input = UserInput.objects.create(**input_data)
+        # 🔹 Retrieve the user_id from the session
+        user_id = request.session.get('user_id')
+
+        # 🔹 Ensure the user is logged in
+        if not user_id:
+            return render(request, 'risk_model/main_page.html', {
+                'error': "User must be logged in to predict risk."
+            })
+
+        # 🔹 Validate that the user_id exists in the CustomUser table
+        try:
+            user = CustomUser.objects.get(user_id=user_id)  # ✅ Changed from User to CustomUser
+        except CustomUser.DoesNotExist:
+            return render(request, 'risk_model/main_page.html', {
+                'error': "Invalid user session. Please log in again."
+            })
+
+        # 🔹 Save the input data into the UserInput model, linking it to the correct CustomUser
+        user_input = UserInput.objects.create(user=user, **input_data)  # ✅ Fixed ForeignKey issue
 
         # Calculate financial ratios
         ratios = calculateRatios(input_data)
@@ -145,11 +234,12 @@ def predict_risk(request):
         # Render prediction results
         return render(request, 'risk_model/show_prediction.html', {
             'prediction': risk_rating,
-            'user_input': user_input  # Pass user input for saving functionality
+            'user_input': user_input  # ✅ Ensures user input is saved with correct user_id
         })
 
     # Render input form if the request method is GET
     return render(request, 'risk_model/main_page.html')
+
 
 def calculateRatios(data):
     ebti_margin = round(data["earnings_before_interest"] / data["total_revenue"], 2)
@@ -174,22 +264,29 @@ def calculateRatios(data):
     return ratios
 
 def admin_dashboard(request):
-    # Fetch all predictions with related user input
-    predictions = Prediction.objects.select_related('user_input').all()
+    try:
+        # Fetch all predictions with related user input
+        predictions = Prediction.objects.select_related('user_input').all()
 
-    # Prepare the data to send to the template
-    prediction_data = [
-        {
-            'id': prediction.id,
-            'name': f"User Input {prediction.user_input.id}",
-            'revenue': prediction.user_input.total_revenue,  # Assuming total_revenue exists in UserInput
-            'risk_category': prediction.risk_rating
-        }
-        for prediction in predictions
-    ]
+        # Prepare the data to send to the template
+        prediction_data = [
+            {
+                'id': prediction.id,
+                'name': f"User Input {prediction.user_input.id}",
+                'revenue': getattr(prediction.user_input, 'total_revenue', 'N/A'),  # Safe handling for missing fields
+                'risk_category': prediction.risk_rating,
+            }
+            for prediction in predictions
+        ]
 
-    # Pass the predictions to the admin dashboard
-    return render(request, 'risk_model/admin.html', {'predictions': prediction_data})
+        # Pass the predictions to the admin dashboard
+        return render(request, 'risk_model/admin.html', {'predictions': prediction_data})
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error in admin_dashboard: {e}")
+        # Return an error page or message
+        return render(request, 'risk_model/admin.html', {'error': 'An error occurred while loading the dashboard.'})
+    
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -227,15 +324,15 @@ def companies_api(request):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
-def admin_login(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        # Mock admin login validation
-        if username == 'admin' and password == 'password123':
-            return JsonResponse({'success': True})
-        return JsonResponse({'success': False})
-    return JsonResponse({'error': 'Invalid method'}, status=400)
+# def admin_login(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#         # Mock admin login validation
+#         if username == 'admin' and password == 'password123':
+#             return JsonResponse({'success': True})
+#         return JsonResponse({'success': False})
+#     return JsonResponse({'error': 'Invalid method'}, status=400)
 
 # function to provide explanation for predicted risk 
 def XGB_XAI():
@@ -328,6 +425,41 @@ def recommend_improv(shap_df):
 
     for feature_name, shap_val in enumerate(shap_df.values):
         print(feature_name, shap_val)
+
+
+def manage_users(request):
+    # Ensure only Admin users can access this page
+    if not request.user.is_authenticated or getattr(request.user, 'role', '') != 'Admin':
+        return redirect('main_page')
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        role = request.POST.get('role', 'Default')
+
+        # Validate password length
+        if len(password) != 6 or not password.isdigit():
+            messages.error(request, "Password must be a 6-digit number.")
+            return redirect('manage_users')
+
+        # Add user to database
+        CustomUser.objects.create(username=username, password=password, role=role)
+        messages.success(request, f"User '{username}' added successfully.")
+        return redirect('manage_users')
+
+    # Fetch all users for display
+    users = CustomUser.objects.all()
+    return render(request, 'risk_model/manage_users.html', {'users': users})
+
+# Added view for deleting users
+def delete_user(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    if user != request.user:  # Prevent admin from deleting themselves
+        user.delete()
+        messages.success(request, f"User '{user.username}' has been deleted.")
+    else:
+        messages.error(request, "You cannot delete your own account.")
+    return redirect('manage_users')
 
 
 XGB_XAI()

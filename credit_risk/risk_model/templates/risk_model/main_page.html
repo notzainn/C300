@@ -8,6 +8,34 @@
     <script src="{% static 'website.js' %}"></script>
 
     <style>
+        .topbar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            background-color: #8a42b0;
+            color: white;
+            padding: 10px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logout-button {
+            background-color: white;
+            color: #8a42b0;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logout-button:hover {
+            background-color: #0056b3;
+            color: white;
+        }
+
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -63,10 +91,10 @@
             text-align: center;
             transition: background-color 0.3s ease;
         }
-         .toggle-sidebar-button:hover {
+        .toggle-sidebar-button:hover {
             background-color: #8a42b0;
             color: white;
-        } 
+        }
         .content {
             margin-left: 250px;
             padding: 20px;
@@ -74,8 +102,7 @@
             box-sizing: border-box;
             transition: margin-left 0.3s ease;
         }
-
-        .content h1{
+        .content h1 {
             text-align: center;
         }
         .content.full-width {
@@ -106,18 +133,15 @@
         button.submit:hover {
             background-color: #0056b3;
         }
-        #adminLogin {
-            display: none;
-        }
         .form-container {
             display: flex;
-            justify-content: center; /* Center the form horizontally */
-            gap: 20px; /* Add space between columns */
+            justify-content: center;
+            gap: 20px;
             margin-top: 20px;
         }
         .form-column {
-            flex: 1; /* Take equal space for both columns */
-            max-width: 50%; /* Limit width to half the screen */
+            flex: 1;
+            max-width: 50%;
         }
         .form-column label {
             display: block;
@@ -143,79 +167,44 @@
         .form-column button:hover {
             background-color: #0056b3;
         }
-
     </style>
 </head>
 <body>
     <button class="toggle-sidebar-button" id="sidebarToggle">☰</button>
+
     <div class="sidebar" id="sidebar">
-        <button id="adminLoginButton">
-            <span>Admin Login</span>
+        {% if not user %}
+        <button id="userLoginButton" onclick="showLogin()">
+            <span>User Login</span>
         </button>
-        <button id="toggleForm">
+        {% endif %}
+
+        <button id="toggleForm" onclick="showForm()">
             <span>Credit Rating Form</span>
         </button>
 
+        {% if role == 'Admin' %}
+        <button id="adminDashboardButton" onclick="window.location.href='{% url 'admin_dashboard' %}'">
+            <span>Admin Dashboard</span>
+        </button>
+        {% endif %}
     </div>
+
+    {% if user %}
+    <div class="topbar">
+        <span>Logged in as: {{ user }}</span>
+        <form method="post" action="{% url 'user_logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="logout-button">Logout</button>
+        </form>
+    </div>
+    {% endif %}
 
     <!-- Main Content -->
     <div id="formContent" class="content">
         <h1>Credit Rating Prediction Form</h1>
-        <!-- <form id="creditForm" method="post" action="/predict/">
-            <label for="name">Company Name:</label>
-            <input type="text" id="name" name="name" placeholder="Enter your company name" required>
-
-            <label for="cash">Cash</label>
-            <input type="text" id="cash" name="cash" placeholder="Enter your total cash" required>
-
-            <label for="Total Inventory">Total Inventory</label>
-            <input type="text" id="Total Inventory" name="Total Inventory" placeholder="Enter your total inventory" required>
-
-            <label for="Non-Current Asset">Non-Current Asset</label>
-            <input type="Non-Current Asset" id="Non-Current Asset" name="Non-Current Asset" placeholder="Enter your Non-Current Asset" required>
-
-            <label for="Current Liability">Current Liability</label>
-            <input type="text" id="Current Liability" name="Current Liability" placeholder="Enter your Current Liability" required>
-
-            <label for="Gross Profit ">Gross Profit (+/-):</label>
-            <input type="text" id="Gross Profit" name="Gross Profit" placeholder="Enter your Gross Profit" required>
-
-            <label for="Retained Earnings">Retained Earnings:</label>
-            <input type="Retained Earnings" id="Retained Earnings" name="Retained Earnings" placeholder="Enter your Retained Earnings" required>
-
-            <label for="Earnings before interest">Earnings before interest:</label>
-            <input type="text" id="Earnings before interest" name="Earnings before interest" placeholder="Enter your Earnings before interest" required>
-
-            <label for="Dividends per Share">Dividends per Share:</label>
-            <input type="text" id="Dividends per Share" name="Dividends per Share" placeholder="Enter your Dividends per Share" required>
-
-            <label for="equity">Total Stockholders Equity:</label>
-            <input type="text" id="equity" name="equity" placeholder="Enter your Total Stockholders Equity" required>
-
-            <label for="market">Total Market Value:</label>
-            <input type="text" id="market" name="market" placeholder="Enter your Total Market Value" required>
-
-            <label for="revenue">Total Revenue:</label>
-            <input type="text" id="revenue" name="revenue" placeholder="Enter your Total Revenue" required>
-
-            <label for="cash">Net Cash Flow:</label>
-            <input type="text" id="cash" name="cash" placeholder="Enter your Net Cash Flow" required>
-
-            <label for="debt">Total Long-Term Debt:</label>
-            <input type="text" id="debt" name="debt" placeholder="Enter your Total Long-Term Debt" required>
-
-            <label for="interest">Total Interest and Related Expense:</label>
-            <input type="text" id="interest" name="interest" placeholder="Enter your Total Interest and Related Expense" required>
-
-            <label for="turnover">Sales Turnover (Net):</label>
-            <input type="text" id="turnover" name="turnover" placeholder="Enter your Sales Turnover (Net)" required>
-
-            <button type="submit" class="submit">Predict</button> -->
-
-            <!-- Need to update this part cause need post to database-->
-            <div class="form-container">
-                <!-- Left Column -->
-                <div class="form-column">
+        <div class="form-container">
+            <div class="form-column">
                 <form id="creditForm" method="post" action="/risk_model/predict/">
                     {% csrf_token %}
                     <label for="cash">Cash:</label>
@@ -232,47 +221,62 @@
                     <input type="number" step="0.01" id="retained_earnings" name="retained_earnings" placeholder="Enter your Retained Earnings" required>
                     <label for="earnings_before_interest">Earnings Before Interest:</label>
                     <input type="number" step="0.01" id="earnings_before_interest" name="earnings_before_interest" placeholder="Enter your Earnings Before Interest" required>
-                </div> 
-                 <!-- Right Column -->
-                <div class="form-column">
-                    <label for="dividends_per_share">Dividends per Share:</label>
-                    <input type="number" step="0.01" id="dividends_per_share" name="dividends_per_share" placeholder="Enter your Dividends per Share" required>
-                    <label for="equity">Total Stockholders Equity:</label>
-                    <input type="number" step="0.01" id="equity" name="total_stockholders_equity" placeholder="Enter your Total Stockholders Equity" required>
-                    <label for="market">Total Market Value:</label>
-                    <input type="number" step="0.01" id="market" name="total_market_value" placeholder="Enter your Total Market Value" required>
-                    <label for="revenue">Total Revenue:</label>
-                    <input type="number" step="0.01" id="revenue" name="total_revenue" placeholder="Enter your Total Revenue" required>
-                    <label for="net_cash_flow">Net Cash Flow:</label>
-                    <input type="number" step="0.01" id="net_cash_flow" name="net_cash_flow" placeholder="Enter your Net Cash Flow" required>
-                    <label for="total_long_term_debt">Total Long-Term Debt:</label>
-                    <input type="number" step="0.01" id="total_long_term_debt" name="total_long_term_debt" placeholder="Enter your Total Long-Term Debt" required>
-                    <label for="total_interest_and_related_expense">Total Interest and Related Expense:</label>
-                    <input type="number" step="0.01" id="total_interest_and_related_expense" name="total_interest_and_related_expense" placeholder="Enter your Total Interest and Related Expense" required>
-                    <label for="sales_turnover_net">Sales Turnover (Net):</label>
-                    <input type="number" step="0.01" id="sales_turnover_net" name="sales_turnover_net" placeholder="Enter your Sales Turnover (Net)" required>
-                    <button type="submit">Predict Risk</button>
+            </div>
+            <div class="form-column">
+                <label for="dividends_per_share">Dividends per Share:</label>
+                <input type="number" step="0.01" id="dividends_per_share" name="dividends_per_share" placeholder="Enter your Dividends per Share" required>
+                <label for="equity">Total Stockholders Equity:</label>
+                <input type="number" step="0.01" id="equity" name="total_stockholders_equity" placeholder="Enter your Total Stockholders Equity" required>
+                <label for="market">Total Market Value:</label>
+                <input type="number" step="0.01" id="market" name="total_market_value" placeholder="Enter your Total Market Value" required>
+                <label for="revenue">Total Revenue:</label>
+                <input type="number" step="0.01" id="revenue" name="total_revenue" placeholder="Enter your Total Revenue" required>
+                <label for="net_cash_flow">Net Cash Flow:</label>
+                <input type="number" step="0.01" id="net_cash_flow" name="net_cash_flow" placeholder="Enter your Net Cash Flow" required>
+                <label for="total_long_term_debt">Total Long-Term Debt:</label>
+                <input type="number" step="0.01" id="total_long_term_debt" name="total_long_term_debt" placeholder="Enter your Total Long-Term Debt" required>
+                <label for="total_interest_and_related_expense">Total Interest and Related Expense:</label>
+                <input type="number" step="0.01" id="total_interest_and_related_expense" name="total_interest_and_related_expense" placeholder="Enter your Total Interest and Related Expense" required>
+                <label for="sales_turnover_net">Sales Turnover (Net):</label>
+                <input type="number" step="0.01" id="sales_turnover_net" name="sales_turnover_net" placeholder="Enter your Sales Turnover (Net)" required>
+                <button type="submit">Predict Risk</button>
                 </form>
             </div>
         </div>
     </div>
-        </div>
 
-    <!-- Admin Login Modal -->
-    <div id="adminLogin" class="content">
-        <form id="adminForm" method="post" action="/risk_model/admin_login/">
+<!-- User Login -->
+    <div id="userLogin" class="content" style="display:none;">
+        <form id="userLoginForm" method="post" action="{% url 'user_login' %}">
             {% csrf_token %}
-        <h1>Admin Login</h1>
-        <form id="adminForm">
+            <h1>User Login</h1>
             <label for="username">Username:</label>
             <input type="text" id="username" name="username" placeholder="Enter your username" required>
-
             <label for="password">Password:</label>
             <input type="password" id="password" name="password" placeholder="Enter your password" required>
-
             <button type="submit" class="submit">Login</button>
         </form>
     </div>
 
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const toggleButton = document.getElementById('sidebarToggle');
+        const formContent = document.getElementById('formContent');
+        const userLoginContent = document.getElementById('userLogin');
+
+        toggleButton.addEventListener('click', () => {
+            sidebar.classList.toggle('hidden');
+        });
+
+        function showForm() {
+            formContent.style.display = 'block';
+            userLoginContent.style.display = 'none';
+        }
+
+        function showLogin() {
+            userLoginContent.style.display = 'block';
+            formContent.style.display = 'none';
+        }
+    </script>
 </body>
 </html>

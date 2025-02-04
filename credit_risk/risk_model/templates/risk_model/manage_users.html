@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users</title>
+
+    <!-- Include DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+            background-color: rgb(147, 147, 215); /* Set the background color */
+            color: white; /* Text color */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            color: black;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-button {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .header-button button {
+            background-color: white;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .header-button button:hover {
+            background-color: #ddd;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .form-container {
+            margin-bottom: 20px;
+        }
+
+        .form-container h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        .form-container input, .form-container select {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-container button {
+            display: block;
+            margin-top: 10px;
+            background-color: white;
+            color: black;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            width: 100%;
+        }
+
+        .form-container button:hover {
+            background-color: #ddd;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table th, table td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+
+        table th {
+            background-color: #f0f0f0;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-button">
+            <button onclick="window.location.href='{% url 'admin_dashboard' %}';">Back to Admin Dashboard</button>
+        </div>
+
+        <h1>Manage Users</h1>
+        <p>This is a secure area for authorized personnel only.</p>
+
+        <div class="form-container">
+            <h2>Add User</h2>
+            <form method="post" action="{% url 'manage_users' %}">
+                {% csrf_token %}
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" placeholder="Enter username">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" maxlength="6" placeholder="Enter 6-digit password">
+                <label for="role">Role:</label>
+                <select id="role" name="role">
+                    <option value="Default">Default</option>
+                    <option value="Admin">Admin</option>
+                </select>
+                <button type="submit">Add User</button>
+            </form>
+        </div>
+
+        <div>
+            <h2>Existing Users</h2>
+            <table id="usersTable" class="display">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.user_id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.role }}</td>
+                        <td>
+                            <!-- Actions to edit/delete users -->
+                            <button>Edit</button>
+                            <button>Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Include DataTables JS -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#usersTable').DataTable({
+                paging: true,
+                searching: true,
+                info: true
+            });
+        });
+    </script>
+</body>
+</html>

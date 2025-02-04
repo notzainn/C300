@@ -1,3 +1,4 @@
+{% block content %}
 {% load static %}
 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 <!DOCTYPE html>
@@ -6,6 +7,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
+
+    <a href="{% url 'manage_users' %}" 
+    class="btn btn-secondary float-end"
+    style="display: inline-block; 
+           padding: 12px 20px; 
+           background-color: white; 
+           color: black; 
+           border-radius: 8px; 
+           text-align: center; 
+           text-decoration: none; 
+           font-size: 16px; 
+           margin-bottom: 10px; 
+           border: none; 
+           cursor: pointer;">
+    Manage Users
+ </a>
 
     <!-- Include DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
@@ -276,3 +293,5 @@
     </script>
 </body>
 </html>
+
+{% endblock %}
