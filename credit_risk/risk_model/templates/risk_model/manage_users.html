@@ -1,3 +1,4 @@
+{% block content %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,173 +8,169 @@
 
     <!-- Include DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
-
+    
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
-            margin: 0;
-            background-color: rgb(147, 147, 215); /* Set the background color */
-            color: white; /* Text color */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            background-color: rgb(147, 147, 215);
+            color: white;
         }
-
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            color: black;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .header-button {
-            text-align: left;
-            margin-bottom: 20px;
-        }
-
-        .header-button button {
-            background-color: white;
-            color: black;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .header-button button:hover {
-            background-color: #ddd;
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .form-container {
-            margin-bottom: 20px;
-        }
-
-        .form-container h2 {
-            font-size: 20px;
-            margin-bottom: 15px;
-        }
-
-        .form-container input, .form-container select {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        .form-container button {
-            display: block;
-            margin-top: 10px;
-            background-color: white;
-            color: black;
-            border: none;
-            padding: 12px;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 8px;
-            width: 100%;
-        }
-
-        .form-container button:hover {
-            background-color: #ddd;
-        }
-
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            background-color: #f9f9f9;
+            color: black;
         }
-
-        table th, table td {
+        table, th, td {
             border: 1px solid #ccc;
+        }
+        th, td {
             padding: 10px;
             text-align: left;
         }
-
-        table th {
-            background-color: #f0f0f0;
+        th {
+            background-color: white;
             color: black;
+        }
+        .dataTables_wrapper .dataTables_length select,
+        .dataTables_wrapper .dataTables_filter input {
+            background-color: white;
+            color: black;
+        }
+        h1 {
+            color: black;
+        }
+        p {
+            color: black;
+        }
+        .button-container {
+            text-align: right;
+            margin-top: -50px;
+        }
+        .back-button {
+            background-color: white;
+            color: black;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .back-button:hover {
+            background-color: grey;
+        }
+        .form-container {
+            margin-top: 20px;
+            margin-bottom: 50px; /* Add gap between form and table */
+            background-color: #f9f9f9;
+            color: black;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .form-container label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .form-container input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .form-container button {
+            background-color: white;
+            color: black;
+            padding: 12px 0; /* Full-height padding for better visual balance */
+            font-size: 16px; /* Match the font size of other buttons */
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%; /* Full-width button */
+        }
+        .form-container button:hover {
+            background-color: grey;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header-button">
-            <button onclick="window.location.href='{% url 'admin_dashboard' %}';">Back to Admin Dashboard</button>
-        </div>
+    <h1>Manage Users</h1>
+    <p>View, edit, or delete users in the system.</p>
 
-        <h1>Manage Users</h1>
-        <p>This is a secure area for authorized personnel only.</p>
-
-        <div class="form-container">
-            <h2>Add User</h2>
-            <form method="post" action="{% url 'manage_users' %}">
-                {% csrf_token %}
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" placeholder="Enter username">
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" maxlength="6" placeholder="Enter 6-digit password">
-                <label for="role">Role:</label>
-                <select id="role" name="role">
-                    <option value="Default">Default</option>
-                    <option value="Admin">Admin</option>
-                </select>
-                <button type="submit">Add User</button>
-            </form>
-        </div>
-
-        <div>
-            <h2>Existing Users</h2>
-            <table id="usersTable" class="display">
-                <thead>
-                    <tr>
-                        <th>User ID</th>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                    <tr>
-                        <td>{{ user.user_id }}</td>
-                        <td>{{ user.username }}</td>
-                        <td>{{ user.role }}</td>
-                        <td>
-                            <!-- Actions to edit/delete users -->
-                            <button>Edit</button>
-                            <button>Delete</button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <!-- Back to Admin Dashboard Button -->
+    <div class="button-container">
+        <button class="back-button" onclick="window.location.href='{% url 'admin_dashboard' %}'">
+            Back to Admin Dashboard
+        </button>
     </div>
+
+    <!-- Add User Form -->
+    <div class="form-container">
+        <h2>Add User</h2>
+        <form method="post" action="{% url 'add_user' %}">
+            {% csrf_token %}
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" placeholder="Enter username" 
+                style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px;" required>
+    
+            <label for="password">Password (6-digit PIN):</label>
+            <input type="password" id="password" name="password" maxlength="6" placeholder="Enter 6-digit PIN"
+                style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px;" required>
+    
+            <label for="role">Role:</label>
+            <select id="role" name="role" required 
+                style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px;">
+                <option value="Default">Default</option>
+                <option value="Admin">Admin</option>
+            </select>
+    
+            <button type="submit" style="width: 100%; padding: 12px 0; font-size: 16px; border-radius: 8px; background-color: white; color: black; border: none; cursor: pointer;">
+                Add User
+            </button>
+        </form>
+    </div>
+    
+
+    <!-- User Table -->
+    <table id="userTable" class="display">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.user_id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.role }}</td>
+                <td>
+                    <button>Edit</button>
+                    <button onclick="window.location.href='{% url 'delete_user' user.user_id %}'" style="background-color: red; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
     <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <!-- Include DataTables JS -->
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+
     <script>
         $(document).ready(function() {
-            $('#usersTable').DataTable({
-                paging: true,
-                searching: true,
-                info: true
-            });
+            $('#userTable').DataTable();
         });
     </script>
 </body>
 </html>
+{% endblock %}

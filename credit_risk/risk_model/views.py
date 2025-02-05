@@ -22,6 +22,10 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from .models import CustomUser
 from django.contrib.auth import login, logout
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.contrib.messages import get_messages
+import re
 
 
 # Load trained XG boost model
@@ -58,78 +62,60 @@ data = load_data()
 def dummy_view(request):
     return render(request, 'risk_model/dummy.html')
 
-# Main page view with role-based visibility
 def main_page(request):
+    # Check if the user is logged in
+    if 'user_id' not in request.session:
+        return redirect('user_login')  # Redirect to login page if not logged in
+    
     user = request.session.get('username')
     role = request.session.get('role')
     return render(request, 'risk_model/main_page.html', {'user': user, 'role': role})
 
-# admin or no admin
-def toggle_admin(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    if user != request.user:  # Prevent admin from modifying themselves
-        user.is_staff = not user.is_staff
-        user.save()
-        messages.success(request, f"User '{user.username}' admin status updated.")
-    else:
-        messages.error(request, "You cannot modify your own admin status.")
-    return redirect('manage_users')
 
-# Manage Users view
-def manage_users(request):
-    if not request.session.get('role') == 'Admin':  # Ensure only Admin can access
+from django.contrib.messages import get_messages
+
+def user_login(request):
+    # Clear all stale messages
+    storage = get_messages(request)
+    for _ in storage:
+        pass
+
+    # Redirect logged-in users to the main page
+    if 'user_id' in request.session:
         return redirect('main_page')
 
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        role = request.POST.get('role', 'Default')
 
-        # Validate password length
-        if len(password) != 6 or not password.isdigit():
-            messages.error(request, "Password must be exactly 6 digits.")
-            return redirect('manage_users')
-
-        # Create a new user
-        CustomUser.objects.create(username=username, password=password, role=role)
-        messages.success(request, f"User '{username}' added successfully.")
-        return redirect('manage_users')
-
-    # Fetch all users
-    users = CustomUser.objects.all()
-    return render(request, 'risk_model/manage_users.html', {'users': users})
-
-# User login view
-def user_login(request):
-    # 🔹 Prevent logged-in users from accessing the login page
-    if 'user_id' in request.session:
-        return redirect('main_page') # Redirect to Credit Risk Form if already logged in
-
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        # Validate password format (6-digit numerical PIN)
+        if not password.isdigit() or len(password) != 6:
+            messages.error(request, "Please enter your 6-digit PIN.")
+            return redirect('user_login')
 
         try:
-            # Authenticate user from the CustomUser table
+            # Authenticate the user
             user = CustomUser.objects.get(username=username, password=password)
             request.session['user_id'] = user.user_id
             request.session['username'] = user.username
             request.session['role'] = user.role
-            messages.success(request, f"Welcome, {user.username}!")
-
-            return redirect('credit_rating_form')  # Redirect ALL users to Credit Risk Form
-
+            return redirect('main_page')
         except CustomUser.DoesNotExist:
-            messages.error(request, "Invalid username or password.")
+            messages.error(request, "Username or password is invalid!")
             return redirect('user_login')
 
+    # If there are no other messages, add the default welcome message
+    if not messages.get_messages(request):
+        messages.info(request, "Welcome! Please login to get started.")
+        
     return render(request, 'risk_model/main_page.html')
 
-# User logout view
+
 def user_logout(request):
-    request.session.flush()  # 🔹 Clear session data
-    messages.success(request, "You have been logged out.")
-    return redirect('main_page')
+    if 'user_id' in request.session:
+        request.session.flush()  # Clear all session data
+        messages.success(request, "You have been logged out. Please login to get started.")
+    return redirect('user_login')  # Redirect to user login page
 
 
 from django.contrib import messages as saved_messages
@@ -234,7 +220,7 @@ def predict_risk(request):
         # Render prediction results
         return render(request, 'risk_model/show_prediction.html', {
             'prediction': risk_rating,
-            'user_input': user_input  # ✅ Ensures user input is saved with correct user_id
+            'user_input': user_input  # Ensures user input is saved with correct user_id
         })
 
     # Render input form if the request method is GET
@@ -264,11 +250,16 @@ def calculateRatios(data):
     return ratios
 
 def admin_dashboard(request):
+    # to restrict access to logged-in Admin users
+    if not request.session.get('user_id') or request.session.get('role') != 'Admin':
+        messages.error(request, "Access denied. Admins only.")
+        return redirect('user_login')  # Redirect to the login page if unauthorized
+
     try:
-        # Fetch all predictions with related user input
+        # fetch all predictions with related user input
         predictions = Prediction.objects.select_related('user_input').all()
 
-        # Prepare the data to send to the template
+        # prepare the data to send to the template
         prediction_data = [
             {
                 'id': prediction.id,
@@ -286,7 +277,17 @@ def admin_dashboard(request):
         print(f"Error in admin_dashboard: {e}")
         # Return an error page or message
         return render(request, 'risk_model/admin.html', {'error': 'An error occurred while loading the dashboard.'})
-    
+
+def manage(request):
+    # to restrict access to logged-in Admin users
+    if not request.session.get('user_id') or request.session.get('role') != 'Admin':
+        messages.error(request, "Access denied. Admins only.")
+        return redirect('user_login')
+
+    # Fetch all CustomUser objects
+    users = CustomUser.objects.all()
+    return render(request, 'risk_model/manage_users.html', {'users': users})
+
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -451,16 +452,36 @@ def manage_users(request):
     users = CustomUser.objects.all()
     return render(request, 'risk_model/manage_users.html', {'users': users})
 
-# Added view for deleting users
-def delete_user(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    if user != request.user:  # Prevent admin from deleting themselves
-        user.delete()
-        messages.success(request, f"User '{user.username}' has been deleted.")
-    else:
-        messages.error(request, "You cannot delete your own account.")
-    return redirect('manage_users')
+# for adding users
+def add_user(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        role = request.POST.get('role')  # Capture the role from the form
 
+        # Ensure username is unique
+        if CustomUser.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists.')
+            return redirect('manage_users')
+
+        # Create a new user
+        CustomUser.objects.create(username=username, password=password, role=role)
+        messages.success(request, f"User '{username}' added successfully.")
+        return redirect('manage_users')
+
+
+def delete_user(request, user_id):
+    try:
+        # Fetch the user based on user_id
+        user = get_object_or_404(CustomUser, user_id=user_id)
+        username = user.username
+        user.delete()  # Delete the user
+        messages.success(request, f"User '{username}' deleted successfully.")
+    except Exception as e:
+        messages.error(request, f"An error occurred while deleting the user: {e}")
+    
+    # Redirect back to the manage users page
+    return redirect('manage_users')
 
 XGB_XAI()
 
