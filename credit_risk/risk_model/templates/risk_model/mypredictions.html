@@ -1,0 +1,381 @@
+{% block content %}
+{% load static %}
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+
+    <!-- <a href="{% url 'manage_users' %}" 
+    class="btn btn-secondary float-end"
+    style="display: inline-block; 
+           padding: 12px 20px; 
+           background-color: white; 
+           color: black; 
+           border-radius: 8px; 
+           text-align: center; 
+           text-decoration: none; 
+           font-size: 16px; 
+           margin-bottom: 10px; 
+           border: none; 
+           cursor: pointer;">
+    Manage Users
+ </a> -->
+
+    <!-- Include DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: rgb(147, 147, 215); /* Set the background to navy blue */
+            color: white; /* Set text color to white for better contrast */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #f9f9f9; /* Light background for the table */
+            color: black; /* Dark text for contrast */
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: white; /* Purple color for the header */
+            color: black; /* White text on the purple header */
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            background-color: white; /* Purple color for the pagination buttons */
+            color: black;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background-color: white; /* Darker purple on hover */
+        }
+        .dataTables_wrapper .dataTables_length select,
+        .dataTables_wrapper .dataTables_filter input {
+            background-color: white; /* Purple background for the select and search boxes */
+            color: black;
+        }
+        .dataTables_wrapper .dataTables_length select option,
+        .dataTables_wrapper .dataTables_filter input {
+            color: black;
+        }
+
+        /* Styling for "Show," "Search," and "entries" text */
+        .dataTables_length label, .dataTables_filter label {
+        color: black; /* Make label text black */
+}
+
+        .dataTables_length select, .dataTables_filter input {
+        color: black; /* Input and dropdown text color */
+        background-color: white; /* Ensure a white background for inputs */
+        border: 1px solid #ccc; /* Light gray border */
+        padding: 5px;
+        border-radius: 5px;
+}
+
+        form {
+            margin-bottom: 20px;
+        }
+        label, input, button {
+            display: block;
+            margin-bottom: 10px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+             color: black; /* Make the main heading black */
+        }
+
+        p {
+            color: black; /* Make the subtitle black */
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        label {
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: block;
+            color: #555;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            border-color: #ad6fd3; /* Focus color */
+            background-color: #f0f4f9; /* Background on focus */
+        }
+
+        button[type="submit"] {
+            background-color: white;
+            color: black;
+            padding: 12px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button[type="submit"]:hover {
+            background-color: grey;
+        }
+
+        button[type="button"] {
+            background-color: #ccc;
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+        }
+
+        button[type="button"]:hover {
+            background-color: #aaa;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>View Your Predictions</h1>
+    <!-- <p>This is a secure area for authorized personnel only.</p> -->
+    <!-- <button onclick="window.location.href='{% url 'main_page' %}';">Back to Main Page</button> -->
+    <div id="user-id" data-user-id="{{ request.session.user_id }}"></div>
+
+    <h2>Edit Predictions</h2>
+
+    <!-- Form to Add or Update Company -->
+    <div id="edit-form">
+        <label for="user-id">UserID:</label>
+        <input type="text" id="user-id" placeholder="Enter user id" readonly> <!-- Read-only -->
+    
+        <label for="revenue">Total Revenue:</label>
+        <input type="text" id="revenue" placeholder="Enter revenue">
+    
+        <label for="risk-category">Risk Category:</label>
+        <select id="risk-category">
+            <option value="">Select Risk Category</option>
+            <option value="Low Risk">Low Risk</option>
+            <option value="Medium Risk">Medium Risk</option>
+            <option value="High Risk">High Risk</option>
+        </select>
+
+        <div style="margin-top: 20px; text-align: center;">
+            <button id="save-btn" style="padding: 10px 30px; font-size: 18px; background-color: white; color: black; border: none; border-radius: 8px; cursor: pointer;">
+                Save
+            </button>
+        </div>
+        
+    </div>
+    
+    <!-- Table to Display Companies -->
+    <table id="predictionTable" class="display">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Revenue</th>
+                <th>Risk Category</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if predictions %}
+                {% for prediction in predictions %}
+                <tr data-owner-id="{{prediction.user_input.user.id}}">
+                <tr>
+                    <td>{{ prediction.user_input.id }}</td>
+                    <td>{{ prediction.user_input.total_revenue }}</td>
+                    <td>{{ prediction.risk_rating }}</td>
+                    <td>
+                        <button onclick="window.location.href='{% url 'generate_pdf' prediction.id %}'">
+                    Generate Report
+                </button>
+                        <button class="edit-btn" data-id="{{ prediction.user_input.id }}">Edit</button>
+                    <button class="delete-btn" data-id="{{ prediction.id }}">Delete</button>
+                    </td>
+                </tr>
+            </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center;">No predictions found for your account.</td>
+                </tr>
+            {% endif %}
+        </tbody>        
+    </table>
+
+ <!--    <div style="margin-top: 20px; text-align: center;">
+        <button onclick="window.location.href='{% url "export_to_pdf" %}'">Export to PDF</button>
+        <button onclick="window.location.href='{% url 'main_page' %}';">Back to Main Page</button>
+    </div> -->
+
+    <div style="margin-top: 20px; text-align: center;  display: flex; justify-content: center; gap: 20px;">
+        <button 
+            style="padding: 15px 20px; font-size: 16px; margin-right: 10px; border-radius: 8px; background-color: white; color: black; border: none; cursor: pointer;" 
+            onclick="window.location.href='{% url 'export_to_pdf' %}'">
+            Export to PDF
+        </button>
+        <button 
+            style="padding: 15px 20px; font-size: 16px; margin-left: 10px; border-radius: 8px; background-color: white; color: black; border: none; cursor: pointer;" 
+            onclick="window.location.href='{% url 'main_page' %}'">
+            Back to Main Page
+        </button>
+    </div>
+
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Include DataTables JS -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+
+
+
+
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTables with options
+            $('#companyTable').DataTable({
+                "pagingType": "full_numbers", // Pagination type
+                "lengthMenu": [10, 25, 50, 75, 100], // Entries per page option
+                "searching": true, // Enable search functionality
+                "ordering": true, // Enable sorting functionality
+                "info": true, // Show "Showing X to Y of Z entries"
+                "autoWidth": false // Adjust column width automatically
+            });
+
+            // Edit button functionality
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    const row = this.closest('tr');
+                    const userId = row.children[0].textContent.trim();
+                    const revenue = row.children[1].textContent.trim();
+                    const riskCategory = row.children[2].textContent.trim();
+
+                    document.getElementById('user-id').value = userId;
+                    document.getElementById('revenue').value = revenue;
+                    document.getElementById('risk-category').value = riskCategory;
+                });
+            });
+
+            // Save button functionality
+            document.getElementById('save-btn').addEventListener('click', function () {
+                const userId = document.getElementById('user-id').value;
+                const revenue = document.getElementById('revenue').value;
+                const riskCategory = document.getElementById('risk-category').value;
+
+                const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+                fetch('update/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        revenue: revenue,
+                        risk_category: riskCategory
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        alert(data.message);
+                        location.reload(); // Reload to update dashboard
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(button => {
+    button.addEventListener('click', function () {
+        const predictionId = this.getAttribute('data-id'); // Get the Prediction ID
+
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+        if (confirm('Are you sure you want to delete this prediction?')) {
+            fetch('/risk_model/mypredictions/delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({ id: predictionId }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    location.reload(); // Refresh the table
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+        }
+    });
+});
+
+
+           /*  // Form submission logic (Add or update company)
+            $('#companyForm').submit(function(event) {
+                event.preventDefault();
+
+                const name = $('#name').val();
+                const revenue = $('#revenue').val();
+                const riskCategory = $('#riskCategory').val();
+
+                // Add a new row to the table
+                const table = $('#companyTable').DataTable();
+                table.row.add([
+                    name,
+                    revenue,
+                    riskCategory,
+                    '<button>Edit</button> <button>Delete</button>'
+                ]).draw();
+
+                // Reset the form
+                $('#companyForm')[0].reset();
+            }); */
+        });
+    </script>
+</body>
+</html>
+
+{% endblock %}

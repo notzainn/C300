@@ -1,3 +1,4 @@
+{% load static %}
 {% block content %}
 <!DOCTYPE html>
 <html lang="en">
@@ -131,6 +132,31 @@
             </button>
         </form>
     </div>
+
+    <!-- Edit User Form -->
+<div class="form-container">
+    <h2>Edit User</h2>
+    <form id="editUserForm" method="post">
+        {% csrf_token %}
+        <input type="hidden" id="editUserId" name="user_id">
+
+        <label for="editUsername">Username:</label>
+        <input type="text" id="editUsername" name="username" required>
+
+        <label for="editPassword">Password (6-digit PIN):</label>
+        <input type="password" id="editPassword" name="password" maxlength="6" required>
+
+        <label for="editRole">Role:</label>
+        <select id="editRole" name="role" required
+            style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px;">
+                <option value="Default">Default</option>
+                <option value="Admin">Admin</option>
+        </select>
+
+        <button type="submit">Save Changes</button>
+    </form>
+</div>
+
     
 
     <!-- User Table -->
@@ -150,7 +176,10 @@
                 <td>{{ user.username }}</td>
                 <td>{{ user.role }}</td>
                 <td>
-                    <button>Edit</button>
+                    <button class="edit-btn" data-id="{{ user.user_id }}" data-username="{{ user.username }}" data-role="{{ user.role }}">
+                        Edit
+                    </button>                    
+
                     <button onclick="window.location.href='{% url 'delete_user' user.user_id %}'" style="background-color: red; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">
                         Delete
                     </button>
@@ -166,11 +195,7 @@
     <!-- Include DataTables JS -->
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
 
-    <script>
-        $(document).ready(function() {
-            $('#userTable').DataTable();
-        });
-    </script>
+    <script src="{% static 'manageuser.js' %}"></script>
 </body>
 </html>
 {% endblock %}

@@ -24,4 +24,9 @@ urlpatterns = [
     path('manage_users/', views.manage, name='manage_users'),
     path('add_user/', views.add_user, name='add_user'),
     path('delete_user/<int:user_id>/', views.delete_user, name='delete_user'),
+    path('mypredictions/', views.mypredictions_view, name='mypredictions'),
+    path('mypredictions/update/', views.update_prediction, name='update_prediction'),
+    path('mypredictions/delete/', views.delete_prediction, name='delete_prediction'),
+    path('edit_user/<int:user_id>/', views.edit_user, name='edit_user'),
+    path('generate_pdf/<int:prediction_id>/', views.generate_pdf, name='generate_pdf'),
 ]

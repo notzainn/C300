@@ -178,6 +178,9 @@
             <button id="toggleForm" onclick="showForm()">
                 <span>Credit Rating Form</span>
             </button>
+            <button onclick="window.location.href='{% url 'mypredictions' %}'">
+                <span>My Predictions</span>
+            </button>
             {% if request.session.role == 'Admin' %}
             <button id="adminDashboardButton" onclick="window.location.href='{% url 'admin_dashboard' %}'">
                 <span>Admin Dashboard</span>

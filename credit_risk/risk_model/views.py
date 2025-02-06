@@ -483,6 +483,27 @@ def delete_user(request, user_id):
     # Redirect back to the manage users page
     return redirect('manage_users')
 
+@csrf_exempt
+def edit_user(request, user_id):
+    if request.method == 'POST':
+        try:
+            user = CustomUser.objects.get(user_id=user_id)
+            user.username = request.POST.get('username')
+            user.password = request.POST.get('password')  # Make sure to hash passwords for security
+            user.role = request.POST.get('role')
+            user.save()
+
+            # Return JSON response with updated data
+            return JsonResponse({
+                'message': 'User updated successfully',
+                'user_id': user_id,
+                'username': user.username,
+                'role': user.role
+            }, status=200)
+        except CustomUser.DoesNotExist:
+            return JsonResponse({'error': 'User not found'}, status=404)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 XGB_XAI()
 
 from django.http import HttpResponse
@@ -610,6 +631,17 @@ def predictions_api(request, id=None):
 def new_form_view(request):
     if request.method == 'POST':
         try:
+            # Retrieve the user_id from session
+            user_id = request.session.get('user_id')
+            if not user_id:
+                return render(request, 'risk_model/new_form.html', {'error': 'User must be logged in to save data.'})
+
+            # Fetch the CustomUser instance
+            try:
+                user = CustomUser.objects.get(user_id=user_id)
+            except CustomUser.DoesNotExist:
+                return render(request, 'risk_model/new_form.html', {'error': 'Invalid user session. Please log in again.'})
+
             # Debugging: Print all received POST data
             print("POST Data:", request.POST)
 
@@ -633,6 +665,7 @@ def new_form_view(request):
 
             # Save user input data
             user_input = UserInput.objects.create(
+                user=user,
                 cash=cash,
                 total_inventory=total_inventory,
                 non_current_asset=non_current_asset,
@@ -656,10 +689,9 @@ def new_form_view(request):
                 risk_rating=risk_category
             )
 
-            print(request, "Record successfully saved.")
-        
-            return redirect(('admin_dashboard'))
+            print("Record successfully saved.")
 
+            return redirect('admin_dashboard')
 
         except Exception as e:
             # Log error and show an error message
@@ -667,3 +699,93 @@ def new_form_view(request):
             return render(request, 'risk_model/new_form.html', {'error': 'Failed to save data. Please try again.'})
 
     return render(request, 'risk_model/new_form.html')
+
+def mypredictions_view(request):
+    if 'user_id' not in request.session:
+        return redirect('user_login')
+    
+    user_id = request.session.get('user_id')
+
+    predictions = Prediction.objects.filter(user_input__user__user_id=user_id)
+    return render(request, 'risk_model/mypredictions.html', {'predictions': predictions}) 
+
+
+
+@csrf_exempt
+def update_prediction(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            prediction_id = data.get('user_id')
+            revenue = data.get('revenue')
+            risk_category = data.get('risk_category')
+
+            if not all([prediction_id, revenue, risk_category]):
+                return JsonResponse({'error': 'Missing required fields'}, status=400)
+
+            # Fix the query to properly reference the ForeignKey
+            prediction = Prediction.objects.get(id=prediction_id)
+            prediction.user_input.total_revenue = revenue
+            prediction.risk_rating = risk_category
+            prediction.user_input.save()
+            prediction.save()
+
+            return JsonResponse({'message': 'Prediction updated successfully!'}, status=200)
+
+        except Prediction.DoesNotExist:
+            return JsonResponse({'error': 'Prediction not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
+@csrf_exempt
+def delete_prediction(request):
+    if request.method == 'POST':
+        try:
+            # Parse the incoming data
+            data = json.loads(request.body)
+            prediction_id = data.get('id')  # Get the prediction ID from the request
+
+            if not prediction_id:
+                return JsonResponse({'error': 'Missing prediction ID'}, status=400)
+
+            # Find and delete the prediction
+            prediction = Prediction.objects.get(id=prediction_id)
+            prediction.delete()
+
+            return JsonResponse({'message': 'Prediction deleted successfully!'}, status=200)
+
+        except Prediction.DoesNotExist:
+            return JsonResponse({'error': 'Prediction not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
+def generate_pdf(request, prediction_id):
+    # Fetch the prediction data
+    try:
+        prediction = Prediction.objects.get(id=prediction_id)
+    except Prediction.DoesNotExist:
+        return HttpResponse("Prediction not found", status=404)
+
+    # Prepare the data for the template
+    context = {
+        'prediction': prediction
+    }
+
+    # Load the HTML template
+    template = get_template("risk_model/genreport.html")  # Create this template
+    html = template.render(context)
+
+    # Create a PDF response
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Prediction_Report_{prediction_id}.pdf"'
+
+    # Convert the HTML to a PDF
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse('Error occurred while generating PDF', status=500)
+
+    return response

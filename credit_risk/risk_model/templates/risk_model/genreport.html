@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prediction Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        th {
+            background-color: #f2f2f2;
+            text-align: center;
+            font-weight: bold;
+        }
+        td {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Prediction Report</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Total Revenue</th>
+                <th>Risk Category</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ prediction.id }}</td>
+                <td>{{ prediction.user_input.total_revenue }}</td>
+                <td>{{ prediction.risk_rating }}</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>
