@@ -16,7 +16,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
-from .models import Company, UserInput, Prediction  # Import models for saving User Input and predictions
+from django.contrib import messages
+from .models import Company, UserInput, Prediction, CustomUser # Import models for saving User Input and predictions
 from django.views.decorators.csrf import csrf_exempt
 from .models import Prediction, UserInput
 import json
@@ -218,7 +219,8 @@ def predict_risk(request):
         # Render prediction results
         return render(request, 'risk_model/show_prediction.html', {
             'prediction': risk_rating,
-            'user_input': user_input  # Pass user input for saving functionality
+            'user_input': user_input,  # Pass user input for saving functionality
+            'shap_waterfall_plot': shap_plot_url,
         })
 
     # Render input form if the request method is GET
@@ -391,19 +393,54 @@ def XGB_XAI(input_df):
         "Lowest Risk Avg": lowest_risk_avg.values,
         "Difference": input_df.iloc[0].values - lowest_risk_avg.values,
         f"SHAP VALUE ({predicted_risk_rating})": shap_values_input[0, :, predicted_risk_binary],
-        "SHAP VALUES (Mean)": shap_values_mean[:, predicted_risk_binary]
-    }).sort_values(by=f"SHAP VALUE ({predicted_risk_rating})" , ascending=False)
+        #f"SHAP VALUE ({reverse_mapping.get(1)})": shap_values_input[0, :, 1],
+        f"SHAP VALUE ({reverse_mapping.get(0)})": shap_values_input[0, :, 0],
+    }).round(2)
 
-    recommend_improv(shap_df)
+    shap_plot_path = os.path.join(static_path, 'shap_waterfall.png')
+
+    shap_explanation = shap.Explanation(
+                        values=shap_values_input[0, :, predicted_risk_binary], 
+                        base_values=shap_explainer.expected_value[predicted_risk_binary], 
+                        data=input_df.iloc[0].values, 
+                        feature_names=feature_name
+                    )
+    # Generate and save the SHAP waterfall plot
+    plt.figure(figsize=(8, 6))
+    shap.plots.waterfall(shap_explanation, show=False)
+    plt.savefig(shap_plot_path, bbox_inches="tight")  # Save to static folder
+    plt.close("all")
 
 
-def recommend_improv(shap_df):
+    suggestions = indiv_assesment(shap_interpretation, predicted_risk_rating)
+    return suggestions
 
-    for feature_name, shap_val in enumerate(shap_df.values):
-        print(feature_name, shap_val)
+def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
+    suggestions = []
+    sort_interpretation = shap_interpretation.sort_values(by=["SHAP VALUE (Lowest Risk)", "Difference"], 
+                                                            ascending=[False, False])
+    print(sort_interpretation)
+    for _, row in sort_interpretation.head(16).iterrows():
+        feature = row["Feature"]
+        user_val = row["User Input"]
+        low_risk_avg = row["Lowest Risk Avg"]
+        diff = row["Difference"]
+        shap_user = row[f"SHAP VALUE ({user_rating})"]
+        low_risk_shap = row["SHAP VALUE (Lowest Risk)"]
+        shap_diff = shap_user - low_risk_shap # Difference in shap value
+
+        if (low_risk_shap > 0 and shap_diff < 0) or (shap_user > 1 and low_risk_shap < 0):
+            print(feature, shap_diff)
+            if diff > 0:
+                percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
+                sugg = (f"Your {feature} is {percent_diff}% higher than the average profile of a lowest-risk user ({user_val} vs {low_risk_avg}). ")
+                        #f"Consider reducing your debt or increasing equity like increasing your retained earnings could help lower your overall risk rating")
+            else: 
+                percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
+                sugg = (f"Your {feature} is {percent_diff}% lower than the average profile of a lowest_risk user ({user_val} vs {low_risk_avg}). ")
+            suggestions.append(sugg)
 
 
-XGB_XAI()
 
 from django.http import HttpResponse
 from django.template.loader import get_template
