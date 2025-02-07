@@ -1,0 +1,143 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Form Page</title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: rgb(147, 147, 215); 
+            color: white; 
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            color: black;
+        }
+
+        h2 {
+            text-align: center;
+            color: black;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+            color: black;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: white;
+            color: black;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: grey;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>New Input Form</h2>
+
+        <form id="newInputForm" method="POST" action="{% url 'new_form_page' %}">
+            {% csrf_token %}
+            <input type="hidden" name="user_id" value="{{ request.session.user_id }}">
+    <label for="cash">Cash:</label>
+    <input type="number" step="0.01" id="cash" name="cash" placeholder="Enter your total cash" required>
+    
+    <label for="total_inventory">Total Inventory:</label>
+    <input type="number" step="0.01" id="total_inventory" name="total_inventory" placeholder="Enter your total inventory" required>
+    
+    <label for="non_current_asset">Non-Current Asset:</label>
+    <input type="number" step="0.01" id="non_current_asset" name="non_current_asset" placeholder="Enter your Non-Current Asset" required>
+    
+    <label for="current_liability">Current Liability:</label>
+    <input type="number" step="0.01" id="current_liability" name="current_liability" placeholder="Enter your Current Liability" required>
+    
+    <label for="gross_profit">Gross Profit:</label>
+    <input type="number" step="0.01" id="gross_profit" name="gross_profit" placeholder="Enter your Gross Profit" required>
+    
+    <label for="retained_earnings">Retained Earnings:</label>
+    <input type="number" step="0.01" id="retained_earnings" name="retained_earnings" placeholder="Enter your Retained Earnings" required>
+    
+    <label for="earnings_before_interest">Earnings Before Interest:</label>
+    <input type="number" step="0.01" id="earnings_before_interest" name="earnings_before_interest" placeholder="Enter your Earnings Before Interest" required>
+    
+    <label for="dividends_per_share">Dividends per Share:</label>
+    <input type="number" step="0.01" id="dividends_per_share" name="dividends_per_share" placeholder="Enter your Dividends per Share" required>
+    
+    <label for="total_stockholders_equity">Total Stockholders Equity:</label>
+    <input type="number" step="0.01" id="total_stockholders_equity" name="total_stockholders_equity" placeholder="Enter your Total Stockholders Equity" required>
+    
+    <label for="total_market_value">Total Market Value:</label>
+    <input type="number" step="0.01" id="total_market_value" name="total_market_value" placeholder="Enter your Total Market Value" required>
+    
+    <label for="total_revenue">Total Revenue:</label>
+    <input type="number" step="0.01" id="total_revenue" name="total_revenue" placeholder="Enter your Total Revenue" required>
+    
+    <label for="net_cash_flow">Net Cash Flow:</label>
+    <input type="number" step="0.01" id="net_cash_flow" name="net_cash_flow" placeholder="Enter your Net Cash Flow" required>
+    
+    <label for="total_long_term_debt">Total Long-Term Debt:</label>
+    <input type="number" step="0.01" id="total_long_term_debt" name="total_long_term_debt" placeholder="Enter your Total Long-Term Debt" required>
+    
+    <label for="total_interest_and_related_expense">Total Interest and Related Expense:</label>
+    <input type="number" step="0.01" id="total_interest_and_related_expense" name="total_interest_and_related_expense" placeholder="Enter your Total Interest and Related Expense" required>
+    
+    <label for="sales_turnover_net">Sales Turnover (Net):</label>
+    <input type="number" step="0.01" id="sales_turnover_net" name="sales_turnover_net" placeholder="Enter your Sales Turnover (Net)" required>
+    
+    <label for="riskCategory">Risk Category:</label>
+    <select id="riskCategory" name="riskCategory" required>
+        <option value="" disabled selected>Select Risk Category</option>
+        <option value="Low Risk">Low Risk</option>
+        <option value="Medium Risk">Medium Risk</option>
+        <option value="High Risk">High Risk</option>
+    </select>
+            <button type="submit">Save</button>
+        </form>
+        
+        <form action="{% url 'admin_dashboard' %}" method="get">
+            <button type="submit">Back to Admin Dashboard</button>
+        </form>
+        
+    </div>
+
+   <!--  <script>
+        document.getElementById('newInputForm').addEventListener('submit', function(event) {
+            alert('Form Submitted Successfully!');
+            this.reset();
+        });
+    </script>
+ -->
+</body>
+</html>

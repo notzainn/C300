@@ -21,8 +21,6 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Prediction, UserInput
 import json
 
-
-
 # Load trained XG boost model
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 model_path = os.path.join(BASE_DIR, 'machine_learning', 'updated_xgb_model.pkl')
@@ -59,11 +57,60 @@ def dummy_view(request):
     return render(request, 'risk_model/dummy.html')
 
 def main_page(request):
+    # Check if the user is logged in
+    if 'user_id' not in request.session:
+        return redirect('user_login')  # Redirect to login page if not logged in
+    
+    user = request.session.get('username')
+    role = request.session.get('role')
+    return render(request, 'risk_model/main_page.html', {'user': user, 'role': role})
+
+
+from django.contrib.messages import get_messages
+
+def user_login(request):
+    # Clear all stale messages
+    storage = get_messages(request)
+    for _ in storage:
+        pass
+
+    # Redirect logged-in users to the main page
+    if 'user_id' in request.session:
+        return redirect('main_page')
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        # Validate password format (6-digit numerical PIN)
+        if not password.isdigit() or len(password) != 6:
+            messages.error(request, "Please enter your 6-digit PIN.")
+            return redirect('user_login')
+
+        try:
+            # Authenticate the user
+            user = CustomUser.objects.get(username=username, password=password)
+            request.session['user_id'] = user.user_id
+            request.session['username'] = user.username
+            request.session['role'] = user.role
+            return redirect('main_page')
+        except CustomUser.DoesNotExist:
+            messages.error(request, "Username or password is invalid!")
+            return redirect('user_login')
+
+    # If there are no other messages, add the default welcome message
+    if not messages.get_messages(request):
+        messages.info(request, "Welcome! Please login to get started.")
+        
     return render(request, 'risk_model/main_page.html')
 
-# View to handle saving of records
-def main_page(request):
-    return render(request, 'risk_model/main_page.html')
+
+def user_logout(request):
+    if 'user_id' in request.session:
+        request.session.flush()  # Clear all session data
+        messages.success(request, "You have been logged out. Please login to get started.")
+    return redirect('user_login')  # Redirect to user login page
+
 
 from django.contrib import messages as saved_messages
 # View to handle saving of records
@@ -91,7 +138,7 @@ def save_prediction(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
-# View to handle form submissions and make predictions
+# Predict Risk View
 def predict_risk(request):
     if request.method == "POST":
         # Input data mapped to match the UserInput model fields
@@ -113,8 +160,25 @@ def predict_risk(request):
             "sales_turnover_net": float(request.POST['sales_turnover_net']),
         }
 
-        # Save the input data into the UserInput model
-        user_input = UserInput.objects.create(**input_data)
+        # 🔹 Retrieve the user_id from the session
+        user_id = request.session.get('user_id')
+
+        # 🔹 Ensure the user is logged in
+        if not user_id:
+            return render(request, 'risk_model/main_page.html', {
+                'error': "User must be logged in to predict risk."
+            })
+
+        # 🔹 Validate that the user_id exists in the CustomUser table
+        try:
+            user = CustomUser.objects.get(user_id=user_id)  # ✅ Changed from User to CustomUser
+        except CustomUser.DoesNotExist:
+            return render(request, 'risk_model/main_page.html', {
+                'error': "Invalid user session. Please log in again."
+            })
+
+        # 🔹 Save the input data into the UserInput model, linking it to the correct CustomUser
+        user_input = UserInput.objects.create(user=user, **input_data)  # ✅ Fixed ForeignKey issue
 
         # Calculate financial ratios
         ratios = calculateRatios(input_data)
@@ -154,12 +218,12 @@ def predict_risk(request):
         # Render prediction results
         return render(request, 'risk_model/show_prediction.html', {
             'prediction': risk_rating,
-            'user_input': user_input,  # Pass user input for saving functionality
-            'shap_waterfall_plot': shap_plot_url
+            'user_input': user_input  # Pass user input for saving functionality
         })
 
     # Render input form if the request method is GET
     return render(request, 'risk_model/main_page.html')
+
 
 def calculateRatios(data):
     ebti_margin = round(data["earnings_before_interest"] / data["total_revenue"], 2)
@@ -184,22 +248,44 @@ def calculateRatios(data):
     return ratios
 
 def admin_dashboard(request):
-    # Fetch all predictions with related user input
-    predictions = Prediction.objects.select_related('user_input').all()
+    # to restrict access to logged-in Admin users
+    if not request.session.get('user_id') or request.session.get('role') != 'Admin':
+        messages.error(request, "Access denied. Admins only.")
+        return redirect('user_login')  # Redirect to the login page if unauthorized
 
-    # Prepare the data to send to the template
-    prediction_data = [
-        {
-            'id': prediction.id,
-            'name': f"User Input {prediction.user_input.id}",
-            'revenue': prediction.user_input.total_revenue,  # Assuming total_revenue exists in UserInput
-            'risk_category': prediction.risk_rating
-        }
-        for prediction in predictions
-    ]
+    try:
+        # fetch all predictions with related user input
+        predictions = Prediction.objects.select_related('user_input').all()
 
-    # Pass the predictions to the admin dashboard
-    return render(request, 'risk_model/admin.html', {'predictions': prediction_data})
+        # prepare the data to send to the template
+        prediction_data = [
+            {
+                'id': prediction.id,
+                'name': f"User Input {prediction.user_input.id}",
+                'revenue': getattr(prediction.user_input, 'total_revenue', 'N/A'),  # Safe handling for missing fields
+                'risk_category': prediction.risk_rating,
+            }
+            for prediction in predictions
+        ]
+
+        # Pass the predictions to the admin dashboard
+        return render(request, 'risk_model/admin.html', {'predictions': prediction_data})
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error in admin_dashboard: {e}")
+        # Return an error page or message
+        return render(request, 'risk_model/admin.html', {'error': 'An error occurred while loading the dashboard.'})
+
+def manage(request):
+    # to restrict access to logged-in Admin users
+    if not request.session.get('user_id') or request.session.get('role') != 'Admin':
+        messages.error(request, "Access denied. Admins only.")
+        return redirect('user_login')
+
+    # Fetch all CustomUser objects
+    users = CustomUser.objects.all()
+    return render(request, 'risk_model/manage_users.html', {'users': users})
+
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -237,15 +323,15 @@ def companies_api(request):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
-def admin_login(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        # Mock admin login validation
-        if username == 'admin' and password == 'password123':
-            return JsonResponse({'success': True})
-        return JsonResponse({'success': False})
-    return JsonResponse({'error': 'Invalid method'}, status=400)
+# def admin_login(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#         # Mock admin login validation
+#         if username == 'admin' and password == 'password123':
+#             return JsonResponse({'success': True})
+#         return JsonResponse({'success': False})
+#     return JsonResponse({'error': 'Invalid method'}, status=400)
 
 # function to provide explanation for predicted risk 
 def XGB_XAI(input_df):
@@ -305,72 +391,19 @@ def XGB_XAI(input_df):
         "Lowest Risk Avg": lowest_risk_avg.values,
         "Difference": input_df.iloc[0].values - lowest_risk_avg.values,
         f"SHAP VALUE ({predicted_risk_rating})": shap_values_input[0, :, predicted_risk_binary],
-        #f"SHAP VALUE ({reverse_mapping.get(1)})": shap_values_input[0, :, 1],
-        f"SHAP VALUE ({reverse_mapping.get(0)})": shap_values_input[0, :, 0],
+        "SHAP VALUES (Mean)": shap_values_mean[:, predicted_risk_binary]
+    }).sort_values(by=f"SHAP VALUE ({predicted_risk_rating})" , ascending=False)
 
-    }).round(2)
-
-    shap_plot_path = os.path.join(static_path, "shap_waterfall.png")
-
-    shap_explanation = shap.Explanation(
-                        values=shap_values_input[0, :, predicted_risk_binary], 
-                        base_values=shap_explainer.expected_value[predicted_risk_binary], 
-                        data=input_df.iloc[0].values, 
-                        feature_names=feature_name
-                    )
-
-    # Generate and save the SHAP waterfall plot
-    plt.figure(figsize=(8, 6))
-    shap.plots.waterfall(shap_explanation, show=False)
-    plt.title("SHAP Waterfall Plot")
-    plt.savefig(shap_plot_path, bbox_inches="tight")  # Save to static folder
-    plt.close("all")
-
-    waterfall_explain = f"From the waterfall plot"
-
-    suggestions = indiv_assesment(shap_interpretation, predicted_risk_rating)
-
-    return suggestions
+    recommend_improv(shap_df)
 
 
-def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
-    suggestions = []
+def recommend_improv(shap_df):
 
-    sort_interpretation = shap_interpretation.sort_values(by=["SHAP VALUE (Lowest Risk)", "Difference"], 
-                                                            ascending=[False, False])
+    for feature_name, shap_val in enumerate(shap_df.values):
+        print(feature_name, shap_val)
 
-    for _, row in sort_interpretation.head(16).iterrows():
-        feature = row["Feature"]
-        user_val = row["User Input"]
-        low_risk_avg = row["Lowest Risk Avg"]
-        diff = row["Difference"]
-        shap_user = row[f"SHAP VALUE ({user_rating})"]
-        low_risk_shap = row["SHAP VALUE (Lowest Risk)"]
 
-        shap_diff = shap_user - low_risk_shap # Difference in shap value
-
-        if (low_risk_shap > 0 and shap_diff < 0) or (shap_user > 1 and low_risk_shap < 0):
-            print(feature, shap_diff)
-            if diff > 0:
-                percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
-                sugg = (f"Your {feature} is {percent_diff}% higher than the average profile of a lowest-risk user ({user_val} vs {low_risk_avg}). ")
-                        #f"Consider reducing your debt or increasing equity like increasing your retained earnings could help lower your overall risk rating")
-            else: 
-                percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
-                sugg = (f"Your {feature} is {percent_diff}% lower than the average profile of a lowest_risk user ({user_val} vs {low_risk_avg}). ")
-            suggestions.append(sugg)
-
-        
-
-        # elif feature == "Current Ratio":
-        #     print(diff)
-        # elif feature == "Interest Coverage":
-        #     print(shap_user)
-        #     print(diff, low_risk_avg)
-        
-
-    return(suggestions)
-
+XGB_XAI()
 
 from django.http import HttpResponse
 from django.template.loader import get_template
@@ -492,3 +525,166 @@ def predictions_api(request, id=None):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def new_form_view(request):
+    if request.method == 'POST':
+        try:
+            # Retrieve the user_id from session
+            user_id = request.session.get('user_id')
+            if not user_id:
+                return render(request, 'risk_model/new_form.html', {'error': 'User must be logged in to save data.'})
+
+            # Fetch the CustomUser instance
+            try:
+                user = CustomUser.objects.get(user_id=user_id)
+            except CustomUser.DoesNotExist:
+                return render(request, 'risk_model/new_form.html', {'error': 'Invalid user session. Please log in again.'})
+
+            # Debugging: Print all received POST data
+            print("POST Data:", request.POST)
+
+            # Extract and validate input data
+            cash = float(request.POST.get('cash', '0').strip())
+            total_inventory = float(request.POST.get('total_inventory', '0').strip())
+            non_current_asset = float(request.POST.get('non_current_asset', '0').strip())
+            current_liability = float(request.POST.get('current_liability', '0').strip())
+            gross_profit = float(request.POST.get('gross_profit', '0').strip())
+            retained_earnings = float(request.POST.get('retained_earnings', '0').strip())
+            earnings_before_interest = float(request.POST.get('earnings_before_interest', '0').strip())
+            dividends_per_share = float(request.POST.get('dividends_per_share', '0').strip())
+            total_stockholders_equity = float(request.POST.get('total_stockholders_equity', '0').strip())
+            total_market_value = float(request.POST.get('total_market_value', '0').strip())
+            total_revenue = float(request.POST.get('total_revenue', '0').strip())
+            net_cash_flow = float(request.POST.get('net_cash_flow', '0').strip())
+            total_long_term_debt = float(request.POST.get('total_long_term_debt', '0').strip())
+            total_interest_and_related_expense = float(request.POST.get('total_interest_and_related_expense', '0').strip())
+            sales_turnover_net = float(request.POST.get('sales_turnover_net', '0').strip())
+            risk_category = request.POST.get('riskCategory', '').strip()  # Risk category remains as a string
+
+            # Save user input data
+            user_input = UserInput.objects.create(
+                user=user,
+                cash=cash,
+                total_inventory=total_inventory,
+                non_current_asset=non_current_asset,
+                current_liability=current_liability,
+                gross_profit=gross_profit,
+                retained_earnings=retained_earnings,
+                earnings_before_interest=earnings_before_interest,
+                dividends_per_share=dividends_per_share,
+                total_stockholders_equity=total_stockholders_equity,
+                total_market_value=total_market_value,
+                total_revenue=total_revenue,
+                net_cash_flow=net_cash_flow,
+                total_long_term_debt=total_long_term_debt,
+                total_interest_and_related_expense=total_interest_and_related_expense,
+                sales_turnover_net=sales_turnover_net,
+            )
+
+            # Save prediction data
+            Prediction.objects.create(
+                user_input=user_input,
+                risk_rating=risk_category
+            )
+
+            print("Record successfully saved.")
+
+            return redirect('admin_dashboard')
+
+        except Exception as e:
+            # Log error and show an error message
+            print(f"Error saving data: {e}")
+            return render(request, 'risk_model/new_form.html', {'error': 'Failed to save data. Please try again.'})
+
+    return render(request, 'risk_model/new_form.html')
+
+def mypredictions_view(request):
+    if 'user_id' not in request.session:
+        return redirect('user_login')
+    
+    user_id = request.session.get('user_id')
+
+    predictions = Prediction.objects.filter(user_input__user__user_id=user_id)
+    return render(request, 'risk_model/mypredictions.html', {'predictions': predictions}) 
+
+
+
+@csrf_exempt
+def update_prediction(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            prediction_id = data.get('user_id')
+            revenue = data.get('revenue')
+            risk_category = data.get('risk_category')
+
+            if not all([prediction_id, revenue, risk_category]):
+                return JsonResponse({'error': 'Missing required fields'}, status=400)
+
+            # Fix the query to properly reference the ForeignKey
+            prediction = Prediction.objects.get(id=prediction_id)
+            prediction.user_input.total_revenue = revenue
+            prediction.risk_rating = risk_category
+            prediction.user_input.save()
+            prediction.save()
+
+            return JsonResponse({'message': 'Prediction updated successfully!'}, status=200)
+
+        except Prediction.DoesNotExist:
+            return JsonResponse({'error': 'Prediction not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
+@csrf_exempt
+def delete_prediction(request):
+    if request.method == 'POST':
+        try:
+            # Parse the incoming data
+            data = json.loads(request.body)
+            prediction_id = data.get('id')  # Get the prediction ID from the request
+
+            if not prediction_id:
+                return JsonResponse({'error': 'Missing prediction ID'}, status=400)
+
+            # Find and delete the prediction
+            prediction = Prediction.objects.get(id=prediction_id)
+            prediction.delete()
+
+            return JsonResponse({'message': 'Prediction deleted successfully!'}, status=200)
+
+        except Prediction.DoesNotExist:
+            return JsonResponse({'error': 'Prediction not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
+def generate_pdf(request, prediction_id):
+    # Fetch the prediction data
+    try:
+        prediction = Prediction.objects.get(id=prediction_id)
+    except Prediction.DoesNotExist:
+        return HttpResponse("Prediction not found", status=404)
+
+    # Prepare the data for the template
+    context = {
+        'prediction': prediction
+    }
+
+    # Load the HTML template
+    template = get_template("risk_model/genreport.html")  # Create this template
+    html = template.render(context)
+
+    # Create a PDF response
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Prediction_Report_{prediction_id}.pdf"'
+
+    # Convert the HTML to a PDF
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse('Error occurred while generating PDF', status=500)
+
+    return response
