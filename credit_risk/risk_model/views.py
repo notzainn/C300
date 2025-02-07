@@ -725,3 +725,49 @@ def generate_pdf(request, prediction_id):
         return HttpResponse('Error occurred while generating PDF', status=500)
 
     return response
+
+def add_user(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        role = request.POST.get('role')  # Capture the role from the form
+        # Ensure username is unique
+        if CustomUser.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists.')
+            return redirect('manage_users')
+        # Create a new user
+        CustomUser.objects.create(username=username, password=password, role=role)
+        messages.success(request, f"User '{username}' added successfully.")
+        return redirect('manage_users')
+    
+@csrf_exempt
+def edit_user(request, user_id):
+    if request.method == 'POST':
+        try:
+            user = CustomUser.objects.get(user_id=user_id)
+            user.username = request.POST.get('username')
+            user.password = request.POST.get('password')  # Make sure to hash passwords for security
+            user.role = request.POST.get('role')
+            user.save()
+            # Return JSON response with updated data
+            return JsonResponse({
+                'message': 'User updated successfully',
+                'user_id': user_id,
+                'username': user.username,
+                'role': user.role
+            }, status=200)
+        except CustomUser.DoesNotExist:
+            return JsonResponse({'error': 'User not found'}, status=404)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+def delete_user(request, user_id):
+    try:
+        # Fetch the user based on user_id
+        user = get_object_or_404(CustomUser, user_id=user_id)
+        username = user.username
+        user.delete()  # Delete the user
+        messages.success(request, f"User '{username}' deleted successfully.")
+    except Exception as e:
+        messages.error(request, f"An error occurred while deleting the user: {e}")
+    # Redirect back to the manage users page
+    return redirect('manage_users')
