@@ -281,31 +281,6 @@ def XGB_XAI(input_df):
     #     # "total_interest_and_related_expense": 50000.0,  # High interest payments
     #     # "sales_turnover_net": 400000.0,  # Slow turnover, low efficiency
     # }
-    
-    # ratios = calculateRatios(input_data)
-    
-    # combined_data = {**input_data, **ratios}
-    
-    # features = {
-    #     "Cash": combined_data["cash"],
-    #     "Earnings Before Interest": combined_data["earnings_before_interest"],
-    #     "Gross Profit (Loss)": combined_data["gross_profit"],
-    #     "Retained Earnings": combined_data["retained_earnings"],
-    #     "EBTI Margin (Revenue)": combined_data["EBTI Margin"],
-    #     "Dividends per Share - Pay Date - Calendar": combined_data["dividends_per_share"],
-    #     "Total Stockholders Equity": combined_data["total_stockholders_equity"],
-    #     "Total Market Value (Fiscal Years)": combined_data["total_market_value"],
-    #     "Total Revenue": combined_data["total_revenue"],
-    #     "Net Cash Flow": combined_data["net_cash_flow"],
-    #     "Debt to Equity Ratio": combined_data["Debt_to_Equity"],
-    #     "Return on Asset": combined_data["Return on Asset Ratio"],
-    #     "Interest Coverage": combined_data["Interest Coverage"],
-    #     "Current Ratio": combined_data["Current Ratio"],
-    #     "Return on Equity": combined_data["Return on Equity"],
-    #     "Quick Ratio": combined_data["Quick Ratio"],
-    # }
-
-    # input_df = pd.DataFrame([features])
 
     predicted_risk_binary = model.predict(input_df)[0]
     predicted_risk_rating = reverse_mapping.get(predicted_risk_binary)
@@ -317,10 +292,6 @@ def XGB_XAI(input_df):
 
     # XAI using SHAP
     shap_explainer = shap.TreeExplainer(model, feature_perturbation='tree_path_dependent')
-
-    # Create mean shap value using our dataset to be used for comparing
-    shap_values = shap_explainer.shap_values(X_train)
-    shap_values_mean = np.mean(shap_values, axis=0)
 
     # Create a shap value for our user's input
     shap_values_input = shap_explainer.shap_values(input_df)
@@ -351,8 +322,11 @@ def XGB_XAI(input_df):
     # Generate and save the SHAP waterfall plot
     plt.figure(figsize=(8, 6))
     shap.plots.waterfall(shap_explanation, show=False)
+    plt.title("SHAP Waterfall Plot")
     plt.savefig(shap_plot_path, bbox_inches="tight")  # Save to static folder
     plt.close("all")
+
+    waterfall_explain = f"From the waterfall plot"
 
     suggestions = indiv_assesment(shap_interpretation, predicted_risk_rating)
 
@@ -364,8 +338,6 @@ def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
 
     sort_interpretation = shap_interpretation.sort_values(by=["SHAP VALUE (Lowest Risk)", "Difference"], 
                                                             ascending=[False, False])
-
-    print(sort_interpretation)
 
     for _, row in sort_interpretation.head(16).iterrows():
         feature = row["Feature"]
