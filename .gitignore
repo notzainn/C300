@@ -8,7 +8,7 @@ __pycache__/
 *.sqlite3
 db.sqlite3
 media/
-#static/
+static/images
 
 # Environment variables and credentials
 .env

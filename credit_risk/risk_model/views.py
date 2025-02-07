@@ -26,7 +26,7 @@ import json
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 model_path = os.path.join(BASE_DIR, 'machine_learning', 'updated_xgb_model.pkl')
 data_path = os.path.join(BASE_DIR, 'machine_learning', 'data.pkl')
-static_path = os.path.join(BASE_DIR, 'risk_model', 'static')
+static_path = os.path.join(BASE_DIR, 'risk_model', 'static', 'images')
 
 # Load the model once when the app starts
 def load_model():
