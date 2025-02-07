@@ -408,6 +408,9 @@ def XGB_XAI(input_df):
                         data=input_df.iloc[0].values, 
                         feature_names=feature_name
                     )
+    
+
+
     # Generate and save the SHAP waterfall plot
     plt.figure(figsize=(8, 6))
     shap.plots.waterfall(shap_explanation, show=False)

@@ -217,9 +217,9 @@
         <tbody>
             {% if predictions %}
                 {% for prediction in predictions %}
-                <tr data-owner-id="{{prediction.user_input.user.id}}">
+                <tr data-owner-id="{{prediction.id}}">
                 <tr>
-                    <td>{{ prediction.user_input.id }}</td>
+                    <td>{{ prediction.id }}</td>
                     <td>{{ prediction.user_input.total_revenue }}</td>
                     <td>{{ prediction.risk_rating }}</td>
                     <td>
