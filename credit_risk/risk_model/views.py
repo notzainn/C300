@@ -8,11 +8,14 @@ import matplotlib.pyplot as plt
 import seaborn as sbn
 from sklearn.metrics import roc_curve, confusion_matrix, auc
 import shap
-import lime
-import lime.lime_tabular
 import os
+from django.contrib.auth import login, logout
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.contrib.messages import get_messages
 import re
 from django.http import JsonResponse
+from django.contrib.auth.models import User
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -214,7 +217,7 @@ def predict_risk(request):
         risk_rating_binary = model.predict(input_df)[0]
         risk_rating = reverse_mapping.get(risk_rating_binary, "unknown")
 
-        shap_plot_url = "/static/shap_waterfall.png"
+        shap_plot_url = "/static/images/shap_waterfall.png"
 
         # Render prediction results
         return render(request, 'risk_model/show_prediction.html', {
