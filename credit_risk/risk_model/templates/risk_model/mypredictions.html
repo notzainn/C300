@@ -176,7 +176,7 @@
     <h1>View Your Predictions</h1>
     <!-- <p>This is a secure area for authorized personnel only.</p> -->
     <!-- <button onclick="window.location.href='{% url 'main_page' %}';">Back to Main Page</button> -->
-    <div id="user-id" data-user-id="{{ request.session.user_id }}"></div>
+    <div id="user-data" data-user-id="{{ request.session.user_id }}"></div>
 
     <h2>Edit Predictions</h2>
 
@@ -184,6 +184,9 @@
     <div id="edit-form">
         <label for="user-id">UserID:</label>
         <input type="text" id="user-id" placeholder="Enter user id" readonly> <!-- Read-only -->
+
+        <label for="company_name">Company Name:</label>
+        <input type="text" id="company_name" name="company_name" placeholder="Enter your company name">
     
         <label for="revenue">Total Revenue:</label>
         <input type="text" id="revenue" placeholder="Enter revenue">
@@ -209,6 +212,7 @@
         <thead>
             <tr>
                 <th>ID</th>
+                <th>Name</th>
                 <th>Revenue</th>
                 <th>Risk Category</th>
                 <th>Actions</th>
@@ -218,19 +222,18 @@
             {% if predictions %}
                 {% for prediction in predictions %}
                 <tr data-owner-id="{{prediction.id}}">
-                <tr>
                     <td>{{ prediction.id }}</td>
+                    <td>{{ prediction.user_input.company_name}}</td>
                     <td>{{ prediction.user_input.total_revenue }}</td>
                     <td>{{ prediction.risk_rating }}</td>
                     <td>
                         <button onclick="window.location.href='{% url 'generate_pdf' prediction.id %}'">
-                    Generate Report
-                </button>
+                            Generate Report
+                        </button>
                         <button class="edit-btn" data-id="{{ prediction.id }}">Edit</button>
-                    <button class="delete-btn" data-id="{{ prediction.id }}">Delete</button>
+                        <button class="delete-btn" data-id="{{ prediction.id }}">Delete</button>
                     </td>
                 </tr>
-            </tr>
                 {% endfor %}
             {% else %}
                 <tr>
@@ -264,13 +267,14 @@
     <!-- Include DataTables JS -->
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
 
-
-
-
     <script>
-        $(document).ready(function() {
+        // Get the user ID from the hidden div (Fix duplication issue)
+        const userIdElement = document.getElementById('user-data');
+        const userId = userIdElement ? userIdElement.getAttribute('data-user-id') : null;
+
+       $(document).ready(function() {
             // Initialize DataTables with options
-            $('#companyTable').DataTable({
+            $('#predictionTable').DataTable({
                 "pagingType": "full_numbers", // Pagination type
                 "lengthMenu": [10, 25, 50, 75, 100], // Entries per page option
                 "searching": true, // Enable search functionality
@@ -280,22 +284,24 @@
             });
 
             // Edit button functionality
-            document.querySelectorAll('.edit-btn').forEach(button => {
-                button.addEventListener('click', function () {
-                    const row = this.closest('tr');
-                    const userId = row.children[0].textContent.trim();
-                    const revenue = row.children[1].textContent.trim();
-                    const riskCategory = row.children[2].textContent.trim();
+            $(document).on('click', '.edit-btn', function () {
+                const row = $(this).closest('tr');
+                const userId = row.find('td:eq(0)').text().trim();
+                const name = row.find('td:eq(1)').text().trim();
+                const revenue = row.find('td:eq(2)').text().trim();
+                const riskCategory = row.find('td:eq(3)').text().trim();
 
-                    document.getElementById('user-id').value = userId;
-                    document.getElementById('revenue').value = revenue;
-                    document.getElementById('risk-category').value = riskCategory;
-                });
+                $('#user-id').val(userId);
+                $('#company_name').val(name);
+                $('#revenue').val(revenue);
+                $('#risk-category').val(riskCategory);
             });
+            
 
             // Save button functionality
             document.getElementById('save-btn').addEventListener('click', function () {
                 const userId = document.getElementById('user-id').value;
+                const name = document.getElementById('company_name').value;
                 const revenue = document.getElementById('revenue').value;
                 const riskCategory = document.getElementById('risk-category').value;
 
@@ -309,6 +315,7 @@
                     },
                     body: JSON.stringify({
                         user_id: userId,
+                        name: name,
                         revenue: revenue,
                         risk_category: riskCategory
                     })
@@ -324,32 +331,29 @@
                 });
             });
 
-            document.querySelectorAll('.delete-btn').forEach(button => {
-    button.addEventListener('click', function () {
-        const predictionId = this.getAttribute('data-id'); // Get the Prediction ID
+            $(document).on('click', '.delete-btn', function () {
+            const predictionId = $(this).attr('data-id');
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
 
-        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
-
-        if (confirm('Are you sure you want to delete this prediction?')) {
-            fetch('/risk_model/mypredictions/delete/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                },
-                body: JSON.stringify({ id: predictionId }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    alert(data.message);
-                    location.reload(); // Refresh the table
-                } else {
-                    alert('Error: ' + data.error);
-                }
-            });
-        }
-    });
+    if (confirm('Are you sure you want to delete this prediction?')) {
+        fetch('/risk_model/mypredictions/delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({ id: predictionId }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
 });
 
 

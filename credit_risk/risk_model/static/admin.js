@@ -14,9 +14,13 @@ const renderPredictions = async () => {
         tableBody.innerHTML = ''; // Clear existing rows
 
         predictions.forEach(prediction => {
+           /*  const displayName = prediction.name && prediction.name !== "User Input (ID)"
+            ? prediction.name
+            : prediction.user_input_name || "Unknown"; */
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${prediction.name}</td>
+            row.innerHTML = `            
+                <td>${prediction.name || 'Unnamed Company'}</td>
+                <td>${prediction.user_input_id}</td>
                 <td>${prediction.revenue}</td>
                 <td>${prediction.risk_category}</td>
                 <td>
@@ -25,10 +29,20 @@ const renderPredictions = async () => {
                 </td>
             `;
             tableBody.appendChild(row);
+
         });
 
-        // Reinitialize DataTables
-        $('#companyTable').DataTable();
+        if ($.fn.DataTable.isDataTable('#companyTable')) {
+            $('#companyTable').DataTable().destroy();
+        }
+        $('#companyTable').DataTable({
+            "pagingType": "full_numbers",
+            "lengthMenu": [10, 25, 50, 75, 100],
+            "searching": true,
+            "ordering": true,
+            "info": true,
+            "autoWidth": false
+        });
     } catch (error) {
         console.error('Error fetching predictions:', error);
     }
@@ -49,7 +63,7 @@ const editPrediction = async (id) => {
         const prediction = await response.json();
 
         // Populate the form with the prediction data
-        document.querySelector('#name').value = prediction.name || ''; // Set "User Input X"
+        document.querySelector('#name').value = prediction.name; 
         document.querySelector('#revenue').value = prediction.revenue || 0;
         document.querySelector('#riskCategory').value = prediction.risk_category || '';
 
@@ -61,42 +75,35 @@ const editPrediction = async (id) => {
 };
 
 
-// Save or Update Prediction
+// Save Prediction 
 document.querySelector('#companyForm').addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    // const name = document.querySelector('#name').value.trim();
+    const name = document.querySelector('#name').value.trim();
     const revenue = parseFloat(document.querySelector('#revenue').value.trim());
     const riskCategory = document.querySelector('#riskCategory').value;
 
-    if (isNaN(revenue) || typeof revenue!= 'number')  {
+    if (!name || isNaN(revenue)) {
         alert('Please provide valid inputs.');
         return;
     }
 
-    const company_name = "Admin";
+    if (!currentPredictionId) {
+        alert('No prediction selected for editing.');
+        return;
+    }
 
     const data = {
-        cash: 0.0, 
-                    total_inventory: 0.0,
-                    non_current_asset: 0.0,
-                    current_liability: 0.0,
-                    gross_profit: 0.0,
-                    retained_earnings: 0.0, 
-                    earnings_before_interest : 0.0,
-                    dividends_per_share : 0.0,
-                    total_stockholders_equity: 0.0,
-                    total_market_value : 0.0,
-                    net_cash_flow: 0.0,
-                    total_long_term_debt : 0.0,
-                    total_interest_and_related_expense: 0.0,
-                    sales_turnover_net : 0.0,
-        revenue, risk_category: riskCategory };
-    const url = editMode ? `${apiUrl}${currentPredictionId}/` : apiUrl;
+        name,
+        revenue,
+        risk_category: riskCategory,
+    };
+
+    const url = `${apiUrl}${currentPredictionId}/`; // Always use PUT for editing
 
     try {
         const response = await fetch(url, {
-            method: editMode ? 'PUT' : 'POST',
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': csrftoken, // Add CSRF token if required
@@ -107,59 +114,37 @@ document.querySelector('#companyForm').addEventListener('submit', async (event) 
         const result = await response.json();
 
         if (response.ok && result.status === 'success') {
-            alert(editMode ? 'Prediction updated successfully!' : 'Prediction added successfully!');
-            const updatedData = result.data;
+            alert('Prediction updated successfully!');
 
-            if (!editMode) {
-                // Append the new prediction to the table
-                const tableBody = document.querySelector('#companyTable tbody');
-                const newRow = document.createElement('tr');
-                const newPrediction = result.data;
+            // Update the specific table row dynamically
+            const row = document.querySelector(`button[data-id="${currentPredictionId}"]`).closest('tr');
+            row.innerHTML = `
+                <td>${result.data.name || 'Unnamed Company'}</td>
+                <td>${result.data.user_input_id || 'N/A'}</td>
+                <td>${result.data.revenue}</td>
+                <td>${result.data.risk_category}</td>
+                <td>
+                    <button class="edit-btn" data-id="${result.data.id}">Edit</button>
+                    <button class="delete-btn" data-id="${result.data.id}">Delete</button>
+                </td>
+            `;
 
-                newRow.innerHTML = `
-                    <td>${newPrediction.name}</td>
-                    <td>${newPrediction.revenue}</td>
-                    <td>${newPrediction.risk_category}</td>
-                    <td>
-                        <button class="edit-btn" data-id="${newPrediction.id}">Edit</button>
-                        <button class="delete-btn" data-id="${newPrediction.id}">Delete</button>
-                    </td>
-                `;
-                tableBody.appendChild(newRow);
-            } else {
-                renderPredictions(); // Refresh the table for updates
-            }
+            // Reattach event listeners to the new buttons
+            row.querySelector('.edit-btn').addEventListener('click', () => editPrediction(result.data.id));
+            row.querySelector('.delete-btn').addEventListener('click', () => deletePrediction(result.data.id));
 
-            if (editMode) {
-                // Update the specific table row
-                const row = document.querySelector(`[data-id="${currentPredictionId}"]`).closest('tr');
-                row.innerHTML = `
-                    <td>${updatedData.name}</td>
-                    <td>${updatedData.revenue}</td>
-                    <td>${updatedData.risk_category}</td>
-                    <td>
-                        <button class="edit-btn" data-id="${updatedData.id}">Edit</button>
-                        <button class="delete-btn" data-id="${updatedData.id}">Delete</button>
-                    </td>
-                `;
-
-                // Reattach event listeners to the new buttons
-                row.querySelector('.edit-btn').addEventListener('click', () => editPrediction(updatedData.id));
-                row.querySelector('.delete-btn').addEventListener('click', () => deletePrediction(updatedData.id));
-            } else {
-                // Reload the entire table if a new record is added
-                renderPredictions();
-            }
-            document.querySelector('#companyForm').reset(); // Clear form
-            editMode = false; // Reset edit mode
-            currentPredictionId = null; // Clear current ID
+            // Clear the form and reset editing state
+            document.querySelector('#companyForm').reset();
+            editMode = false;
+            currentPredictionId = null;
         } else {
             throw new Error(result.message || 'An error occurred');
         }
     } catch (error) {
-        console.error('Error saving prediction:', error);
+        console.error('Error updating prediction:', error);
     }
 });
+
 
 
 // Delete Prediction

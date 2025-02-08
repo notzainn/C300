@@ -121,6 +121,7 @@ from django.contrib import messages as saved_messages
 # View to handle saving of records
 def save_prediction(request):
     if request.method == "POST":
+        
         # Get the UserInput ID and the predicted risk rating from the POST request
         user_input_id = request.POST.get('user_input_id')  # Get UserInput reference
         prediction = request.POST.get('prediction')  # Get the risk rating
@@ -146,6 +147,7 @@ def save_prediction(request):
 # Predict Risk View
 def predict_risk(request):
     if request.method == "POST":
+        company_name = request.POST.get('company_name', '').strip()
         # Input data mapped to match the UserInput model fields
         input_data = {
             "cash": float(request.POST['cash']),
@@ -165,25 +167,25 @@ def predict_risk(request):
             "sales_turnover_net": float(request.POST['sales_turnover_net']),
         }
 
-        # 🔹 Retrieve the user_id from the session
+        # Retrieve the user_id from the session
         user_id = request.session.get('user_id')
 
-        # 🔹 Ensure the user is logged in
+        # Ensure the user is logged in
         if not user_id:
             return render(request, 'risk_model/main_page.html', {
                 'error': "User must be logged in to predict risk."
             })
 
-        # 🔹 Validate that the user_id exists in the CustomUser table
+        # Validate that the user_id exists in the CustomUser table
         try:
-            user = CustomUser.objects.get(user_id=user_id)  # ✅ Changed from User to CustomUser
+            user = CustomUser.objects.get(user_id=user_id)  # change user to custom user
         except CustomUser.DoesNotExist:
             return render(request, 'risk_model/main_page.html', {
                 'error': "Invalid user session. Please log in again."
             })
 
         # 🔹 Save the input data into the UserInput model, linking it to the correct CustomUser
-        user_input = UserInput.objects.create(user=user, **input_data)  # ✅ Fixed ForeignKey issue
+        user_input = UserInput.objects.create(user=user, company_name=company_name, **input_data)  # to fix foreign key issue
 
         # Calculate financial ratios
         ratios = calculateRatios(input_data)
@@ -268,10 +270,11 @@ def admin_dashboard(request):
         # prepare the data to send to the template
         prediction_data = [
             {
-                'id': prediction.id,
-                'name': f"User Input {prediction.user_input.id}",
+                'user_input_id': prediction.user_input.id,
+                'name': prediction.user_input.company_name or 'Unnamed Company',
                 'revenue': getattr(prediction.user_input, 'total_revenue', 'N/A'),  # Safe handling for missing fields
                 'risk_category': prediction.risk_rating,
+                'id': prediction.id,
             }
             for prediction in predictions
         ]
@@ -536,7 +539,8 @@ def predictions_api(request, id=None):
                 prediction = Prediction.objects.select_related('user_input').get(id=id)
                 data = {
                     'id': prediction.id,
-                    'name': f"User Input {prediction.user_input.id}",  # Properly formatted name
+                    'user_input_id': prediction.user_input.id,
+                    'name': prediction.user_input.company_name or 'Unnamed Company',
                     'revenue': prediction.user_input.total_revenue,
                     'risk_category': prediction.risk_rating,
                 }
@@ -546,7 +550,8 @@ def predictions_api(request, id=None):
                 data = [
                     {
                         'id': prediction.id,
-                        'name': f"User Input {prediction.user_input.id}",
+                        'user_input_id': prediction.user_input.id,
+                        'name': prediction.user_input.company_name or 'Unnamed Company',
                         'revenue': prediction.user_input.total_revenue,
                         'risk_category': prediction.risk_rating,
                     }
@@ -565,13 +570,15 @@ def predictions_api(request, id=None):
             # Update or create UserInput
             user_input, _ = UserInput.objects.update_or_create(
                 id=data.get('user_input_id'),
-                defaults={'total_revenue': data['revenue']}
+                defaults={'total_revenue': data['revenue'],
+                          'name': data.get('name', '') }
             )
 
             # Update or create Prediction
             prediction, created = Prediction.objects.update_or_create(
                 user_input=user_input,
-                defaults={'risk_rating': data['risk_category']}
+                defaults={'risk_rating': data['risk_category'],
+                          'name': data.get('name', '') }
             )
             return JsonResponse({'status': 'success', 'prediction_id': prediction.id, 'created': created})
         except Exception as e:
@@ -587,16 +594,21 @@ def predictions_api(request, id=None):
             # Update related UserInput fields
             user_input = prediction.user_input
             user_input.total_revenue = body.get('revenue', user_input.total_revenue)  # Update revenue
+            user_input.company_name = body.get('name', user_input.company_name) 
             user_input.save()
 
+            
+
             # Update Prediction fields
+            
             prediction.risk_rating = body.get('risk_category', prediction.risk_rating)
             prediction.save()
 
             # Prepare updated data for response
             updated_data = {
                 'id': prediction.id,
-                'name': f"User Input {user_input.id}",
+                'user_input_id': prediction.user_input.id, 
+                'name': prediction.user_input.company_name,
                 'revenue': user_input.total_revenue,
                 'risk_category': prediction.risk_rating,
             }
@@ -636,6 +648,7 @@ def new_form_view(request):
             print("POST Data:", request.POST)
 
             # Extract and validate input data
+            name = request.POST.get('company_name', '').strip()
             cash = float(request.POST.get('cash', '0').strip())
             total_inventory = float(request.POST.get('total_inventory', '0').strip())
             non_current_asset = float(request.POST.get('non_current_asset', '0').strip())
@@ -656,6 +669,7 @@ def new_form_view(request):
             # Save user input data
             user_input = UserInput.objects.create(
                 user=user,
+                company_name=name,
                 cash=cash,
                 total_inventory=total_inventory,
                 non_current_asset=non_current_asset,
@@ -676,7 +690,7 @@ def new_form_view(request):
             # Save prediction data
             Prediction.objects.create(
                 user_input=user_input,
-                risk_rating=risk_category
+                risk_rating=risk_category,
             )
 
             print("Record successfully saved.")
@@ -707,6 +721,7 @@ def update_prediction(request):
         try:
             data = json.loads(request.body)
             prediction_id = data.get('user_id')
+            name = data.get('name')
             revenue = data.get('revenue')
             risk_category = data.get('risk_category')
 
@@ -717,6 +732,7 @@ def update_prediction(request):
             prediction = Prediction.objects.get(id=prediction_id)
             prediction.user_input.total_revenue = revenue
             prediction.risk_rating = risk_category
+            prediction.user_input.company_name = name
             prediction.user_input.save()
             prediction.save()
 

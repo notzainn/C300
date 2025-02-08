@@ -181,7 +181,7 @@
     <!-- Form to Add or Update Company -->
     <form id="companyForm">
         <label for="name" style="color: white;" >Company Name:</label>
-        <input type="text" id="name" name="name" placeholder="Enter company name" value="Admin" required>
+        <input type="text" id="name" name="name" placeholder="Enter company name" required>
 
         <label for="revenue" style="color: white;" >Total Revenue:</label>
         <input type="number" id="revenue" name="revenue" placeholder="Enter revenue" required>
@@ -203,6 +203,7 @@
         <thead>
             <tr>
                 <th>Name</th>
+                <th>ID</th>
                 <th>Revenue</th>
                 <th>Risk Category</th>
                 <th>Actions</th>
@@ -211,7 +212,8 @@
         <tbody>
             {% for prediction in predictions %}
             <tr>
-                <td>{{ prediction.name }}</td>
+                <td>{{ prediction.name}}</td>
+                <td>{{ prediction.user_input_id}}</td>
                 <td>{{ prediction.revenue }}</td>
                 <td>{{ prediction.risk_category }}</td>
                 <td>
