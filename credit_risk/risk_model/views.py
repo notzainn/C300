@@ -164,25 +164,25 @@ def predict_risk(request):
             "sales_turnover_net": float(request.POST['sales_turnover_net']),
         }
 
-        # 🔹 Retrieve the user_id from the session
+        # Retrieve the user_id from the session
         user_id = request.session.get('user_id')
 
-        # 🔹 Ensure the user is logged in
+        # Ensure the user is logged in
         if not user_id:
             return render(request, 'risk_model/main_page.html', {
                 'error': "User must be logged in to predict risk."
             })
 
-        # 🔹 Validate that the user_id exists in the CustomUser table
+        # Validate that the user_id exists in the CustomUser table
         try:
-            user = CustomUser.objects.get(user_id=user_id)  # ✅ Changed from User to CustomUser
+            user = CustomUser.objects.get(user_id=user_id)  # change user to custom user
         except CustomUser.DoesNotExist:
             return render(request, 'risk_model/main_page.html', {
                 'error': "Invalid user session. Please log in again."
             })
 
         # 🔹 Save the input data into the UserInput model, linking it to the correct CustomUser
-        user_input = UserInput.objects.create(user=user, **input_data)  # ✅ Fixed ForeignKey issue
+        user_input = UserInput.objects.create(user=user, **input_data)  # to fix foreign key issue
 
         # Calculate financial ratios
         ratios = calculateRatios(input_data)
