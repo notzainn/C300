@@ -228,7 +228,7 @@ def predict_risk(request):
             'user_input': user_input,  # Pass user input for saving functionality
             'shap_waterfall_plot': shap_plot_url,
             'waterfall_explanation': results["explanation"],
-            "suggestions": results["suggestions"]
+            "recommendations": results["recommendations"]
         })
 
     # Render input form if the request method is GET
@@ -452,7 +452,7 @@ def XGB_XAI(input_df):
 
 
 def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
-    suggestions = []
+    recommendations = []
 
     sort_interpretation = shap_interpretation.sort_values(by=(f"SHAP VALUE ({user_rating})"), ascending=False)
     print(sort_interpretation)
@@ -481,20 +481,48 @@ def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
         low_risk_shap = row["SHAP VALUE (Lowest Risk)"]
         shap_diff = shap_user - low_risk_shap # Difference in shap value
 
-        if (low_risk_shap > 0 and shap_diff < 0) or (shap_user > 1 and low_risk_shap < 0):
-            print(feature, shap_diff)
-            if diff > 0:
-                percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
-                sugg = (f"Your {feature} is {percent_diff}% higher than the average profile of a lowest-risk user ({user_val} vs {low_risk_avg}). ")
-                        #f"Consider reducing your debt or increasing equity like increasing your retained earnings could help lower your overall risk rating")
-            else: 
-                percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
-                sugg = (f"Your {feature} is {percent_diff}% lower than the average profile of a lowest_risk user ({user_val} vs {low_risk_avg}). ")
-            suggestions.append(sugg)
+        suggestions = ""
+        if user_val < low_risk_avg:
+            if feature == "Current Ratio":
+                suggestions = "A low current ratio of can indicate that a company has insufficient short-term liquidity. Consider increasing current asset or to reduce short-term liabilities to help enhance liquidity."
+            elif feature == "Interest Coverage":
+                suggestions = "A low interest coverage suggest that a company has difficulty covering their interest expense from operating expenses. Consider reducing debt, or improving profitability to ensure better financial security."
+            elif feature == "Quick Ratio":
+                suggestions = "Quick ratio is lower than the benchmark, which means your company may not have enough liquid assets to cover short-term liabilites. Improving cash flow, and reducing reliance on inventory may help reduce risk."
+            elif feature == "EBTI Margin (Revenue)":
+                suggestions = "A low EBTI Margin may suggest that a company has reduced profitability before interest and tax expenses. Consider improving operational efficiency."
+            elif feature == "Return on Equity":
+                suggestions = "A low Return on Equity (ROE) suggest that your company is not generating sufficient returns on shareholder investments. Focus on increasing net income, improving asset efficiency, or optimizing financial management strategy."
+            elif feature == "Return on Asset":
+                suggestions = "A low Return on Asset suggests that your company is not utilizing its asset efficiently to generate profit. Consider reducing unnecessary expenses, optimize asset utilization, op improving operational efficiency."
+            elif feature == "Total Market Value (Fiscal Years)":
+                suggestions = "A low market value may suggest undervaluation or lower investor confidence. Improving financial performance, or increasing brand value may help."
+        elif feature == "Debt to Eequity Ratio" and user_val > low_risk_avg:
+            suggestions = "A high Debt-to-Equity ratio  suggests that your company relies heavily on debt financing. Consider lowering debt reliance for operating, increasing equity via reinvestments."
+
+        # if (low_risk_shap > 0 and shap_diff < 0) or (shap_user > 1 and low_risk_shap < 0):
+        #     print(feature, shap_diff)
+        #     if diff > 0:
+        #         percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
+        #         sugg = (f"Your {feature} is {percent_diff}% higher than the average profile of a lowest-risk user ({user_val} vs {low_risk_avg}). ")
+        #                 #f"Consider reducing your debt or increasing equity like increasing your retained earnings could help lower your overall risk rating")
+        #     else: 
+        #         percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
+        #         sugg = (f"Your {feature} is {percent_diff}% lower than the average profile of a lowest_risk user ({user_val} vs {low_risk_avg}). ")
+        #     suggestions.append(sugg)
+
+        if suggestions:
+            recommendations.append({
+                "feature": feature,
+                "user_value": round(user_val,2),
+                "lowest_risk_avg": round(low_risk_avg, 2),
+                "shap_value": round(shap_user, 2),
+                "suggestions": suggestions
+            })
 
     return {
         "explanation": markdown.markdown(explanation),
-        "suggestions": suggestions,
+        "recommendations": recommendations,
     }
 
 # XGB_XAI()
