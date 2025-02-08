@@ -69,8 +69,11 @@
         <h2>New Input Form</h2>
 
         <form id="newInputForm" method="POST" action="{% url 'new_form_page' %}">
-            {% csrf_token %}
-            <input type="hidden" name="user_id" value="{{ request.session.user_id }}">
+    {% csrf_token %}
+    <input type="hidden" name="user_id" value="{{ request.session.user_id }}">
+    <label for="company_name">Company Name:</label>
+    <input type="text" id="company_name" name="company_name" placeholder="Enter your company name" required>
+    
     <label for="cash">Cash:</label>
     <input type="number" step="0.01" id="cash" name="cash" placeholder="Enter your total cash" required>
     
