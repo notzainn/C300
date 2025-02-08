@@ -46,6 +46,7 @@ class UserInput(models.Model):
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name="user_inputs"  # Use CustomUser instead of User
     )
+    company_name = models.CharField(max_length=255, null=True, blank=True)  # New name field
     cash = models.FloatField()
     total_inventory = models.FloatField()
     non_current_asset = models.FloatField()
