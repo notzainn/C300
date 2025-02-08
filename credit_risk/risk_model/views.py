@@ -14,6 +14,7 @@ from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages import get_messages
 import re
+import markdown
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.shortcuts import render
@@ -211,7 +212,7 @@ def predict_risk(request):
         # Create a DataFrame for prediction
         input_df = pd.DataFrame([features])
 
-        suggestions = XGB_XAI(input_df)
+        results = XGB_XAI(input_df)
 
         # Predict risk rating
         risk_rating_binary = model.predict(input_df)[0]
@@ -224,6 +225,8 @@ def predict_risk(request):
             'prediction': risk_rating,
             'user_input': user_input,  # Pass user input for saving functionality
             'shap_waterfall_plot': shap_plot_url,
+            'waterfall_explanation': results["explanation"],
+            "suggestions": results["suggestions"]
         })
 
     # Render input form if the request method is GET
@@ -290,7 +293,6 @@ def manage(request):
     # Fetch all CustomUser objects
     users = CustomUser.objects.all()
     return render(request, 'risk_model/manage_users.html', {'users': users})
-
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -373,6 +375,31 @@ def XGB_XAI(input_df):
     #     # "sales_turnover_net": 400000.0,  # Slow turnover, low efficiency
     # }
 
+    # ratios = calculateRatios(input_data)
+
+    # combined_data = {**input_data, **ratios}
+
+    # features = {
+    #     'Cash': combined_data["cash"],
+    #     'Earnings Before Interest': combined_data["earnings_before_interest"],
+    #     'Gross Profit (Loss)': combined_data["gross_profit"],
+    #     'Retained Earnings': combined_data["retained_earnings"],
+    #     'EBTI Margin (Revenue)': combined_data["EBTI Margin"],
+    #     'Dividends per Share - Pay Date - Calendar': combined_data["dividends_per_share"],
+    #     'Total Stockholders Equity': combined_data["total_stockholders_equity"],
+    #     'Total Market Value (Fiscal Years)': combined_data["total_market_value"],
+    #     'Total Revenue': combined_data["total_revenue"],
+    #     'Net Cash Flow': combined_data["net_cash_flow"],
+    #     'Debt to Equity Ratio': combined_data["Debt_to_Equity"],
+    #     'Return on Asset': combined_data["Return on Asset Ratio"],
+    #     'Interest Coverage': combined_data["Interest Coverage"],
+    #     'Current Ratio': combined_data["Current Ratio"],
+    #     'Return on Equity': combined_data["Return on Equity"],
+    #     'Quick Ratio': combined_data["Quick Ratio"],
+    # }
+
+    # input_df = pd.DataFrame([features])
+
     predicted_risk_binary = model.predict(input_df)[0]
     predicted_risk_rating = reverse_mapping.get(predicted_risk_binary)
 
@@ -408,24 +435,40 @@ def XGB_XAI(input_df):
                         data=input_df.iloc[0].values, 
                         feature_names=feature_name
                     )
-    
-
 
     # Generate and save the SHAP waterfall plot
     plt.figure(figsize=(8, 6))
     shap.plots.waterfall(shap_explanation, show=False)
     plt.savefig(shap_plot_path, bbox_inches="tight")  # Save to static folder
+    plt.title("SHAP Waterfall Plot")
     plt.close("all")
-
 
     suggestions = indiv_assesment(shap_interpretation, predicted_risk_rating)
     return suggestions
 
+
+
 def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
     suggestions = []
-    sort_interpretation = shap_interpretation.sort_values(by=["SHAP VALUE (Lowest Risk)", "Difference"], 
-                                                            ascending=[False, False])
+
+    sort_interpretation = shap_interpretation.sort_values(by=(f"SHAP VALUE ({user_rating})"), ascending=False)
     print(sort_interpretation)
+
+    top_positive = sort_interpretation.head(3)
+    top_negative = sort_interpretation.tail(3)
+
+    explanation = f"**Key Influences on Your Risk Rating Include:**\n"
+
+    explanation += "\n**Increased Risk Factors:**\n\n"
+    for index, row in top_positive.iterrows():
+        explanation += f" - {row['Feature']}: **{row[f'SHAP VALUE ({user_rating})']:.2f}** (Contributed to higher risk)\n"
+    
+    explanation += "\n**Decreased Risk Factors:**\n\n"
+    for index, row in top_negative.iterrows():
+        explanation += f" - {row['Feature']}: **{row[f'SHAP VALUE ({user_rating})']:.2f}** (Helped lower your risk)\n"
+
+    explanation += "To reduce your risk, focus on improving the factors that increase your risk score"
+
     for _, row in sort_interpretation.head(16).iterrows():
         feature = row["Feature"]
         user_val = row["User Input"]
@@ -446,7 +489,12 @@ def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
                 sugg = (f"Your {feature} is {percent_diff}% lower than the average profile of a lowest_risk user ({user_val} vs {low_risk_avg}). ")
             suggestions.append(sugg)
 
+    return {
+        "explanation": markdown.markdown(explanation),
+        "suggestions": suggestions,
+    }
 
+# XGB_XAI()
 
 from django.http import HttpResponse
 from django.template.loader import get_template

@@ -58,7 +58,25 @@
         <p>The predicted risk rating is: <strong>{{ prediction }}</strong></p>
         
         <img src="{{ shap_waterfall_plot }}" alt="SHAP waterfall plot" class="shap_plot">
+        
+        <p>
+            The waterfall plot is used to help show how different financial features has contributed to your risk rating ({{ prediction }}).
+            The red bar indicates factors increasing your risk, while blue bar indicate factors lowering your risk.
+            By understanding these contributions, you can take into account how to properly improve your risk profile.
+        </p>
 
+        <p>{{ waterfall_explanation|safe }}</p>
+
+        <h3>Suggestions</h3>
+        <div class="suggestions">
+            {% for sugg in suggestions %}
+            <div class="suggestion-items">
+                <p class="Feature">{{ sugg }}</p>
+            </div>
+            {% empty %}
+                <p>No specific recommendations</p>
+            {% endfor %}
+        </div>
         <!-- Save Prediction Button -->
         <form method="POST" action="{% url 'save_prediction' %}">
             {% csrf_token %}
