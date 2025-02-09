@@ -482,6 +482,7 @@ def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
         shap_diff = shap_user - low_risk_shap # Difference in shap value
 
         suggestions = ""
+        
         if user_val < low_risk_avg:
             if feature == "Current Ratio":
                 suggestions = "A low current ratio of can indicate that a company has insufficient short-term liquidity. Consider increasing current asset or to reduce short-term liabilities to help enhance liquidity."
