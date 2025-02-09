@@ -761,6 +761,7 @@ def delete_prediction(request):
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)
     
+from django.conf import settings    
 def generate_pdf(request, prediction_id):
     # Fetch the prediction data
     try:
@@ -768,10 +769,89 @@ def generate_pdf(request, prediction_id):
     except Prediction.DoesNotExist:
         return HttpResponse("Prediction not found", status=404)
 
+    # Fetch user input data linked to the prediction
+    try:
+        user_input = prediction.user_input
+    except AttributeError:
+        return HttpResponse("User input data not found for the prediction.", status=404)
+
+    # Define SHAP plot path
+    shap_plot_path = os.path.join(settings.BASE_DIR, 'risk_model', 'static', 'images', 'shap_waterfall.png')
+    shap_plot_path = shap_plot_path.replace('\\', '/')
+
+    # Ensure the SHAP plot file exists
+    if not os.path.exists(shap_plot_path):
+        return HttpResponse("SHAP plot image not found", status=404)
+
+    # Prepare raw input data
+    raw_input_data = {
+        "cash": user_input.cash,
+        "total_inventory": user_input.total_inventory,
+        "non_current_asset": user_input.non_current_asset,
+        "current_liability": user_input.current_liability,
+        "gross_profit": user_input.gross_profit,
+        "retained_earnings": user_input.retained_earnings,
+        "earnings_before_interest": user_input.earnings_before_interest,
+        "dividends_per_share": user_input.dividends_per_share,
+        "total_stockholders_equity": user_input.total_stockholders_equity,
+        "total_market_value": user_input.total_market_value,
+        "total_revenue": user_input.total_revenue,
+        "net_cash_flow": user_input.net_cash_flow,
+        "total_long_term_debt": user_input.total_long_term_debt,
+        "total_interest_and_related_expense": user_input.total_interest_and_related_expense,
+        "sales_turnover_net": user_input.sales_turnover_net,
+    }
+
+    # Call the calculateRatios function to compute ratios
+    try:
+        calculated_ratios = calculateRatios(raw_input_data)
+    except Exception as e:
+        return HttpResponse(f"Error calculating ratios: {e}", status=500)
+
+    # Combine raw input data and calculated ratios
+    combined_data = {**raw_input_data, **calculated_ratios}
+
+    # Prepare features for the model
+    features = {
+        'Cash': combined_data["cash"],
+        'Earnings Before Interest': combined_data["earnings_before_interest"],
+        'Gross Profit (Loss)': combined_data["gross_profit"],
+        'Retained Earnings': combined_data["retained_earnings"],
+        'EBTI Margin (Revenue)': combined_data["EBTI Margin"],  # Calculated dynamically
+        'Dividends per Share - Pay Date - Calendar': combined_data["dividends_per_share"],
+        'Total Stockholders Equity': combined_data["total_stockholders_equity"],
+        'Total Market Value (Fiscal Years)': combined_data["total_market_value"],
+        'Total Revenue': combined_data["total_revenue"],
+        'Net Cash Flow': combined_data["net_cash_flow"],
+        'Debt to Equity Ratio': combined_data["Debt_to_Equity"],
+        'Return on Asset': combined_data["Return on Asset Ratio"],
+        'Interest Coverage': combined_data["Interest Coverage"],
+        'Current Ratio': combined_data["Current Ratio"],
+        'Return on Equity': combined_data["Return on Equity"],
+        'Quick Ratio': combined_data["Quick Ratio"],
+    }
+
+    input_df = pd.DataFrame([features])
+
+    try:
+        shap_results = XGB_XAI(input_df)
+    except Exception as e:
+        return HttpResponse(f"Error generating explanations: {e}", status=500)
+    
+    shap_explanation = shap_results.get("explanation", "No explanation available")
+    shap_recommendations = shap_results.get("recommendations", [])
+
+    key_influences = shap_explanation 
+    
+    
     # Prepare the data for the template
     context = {
-        'prediction': prediction
+        'prediction': prediction.risk_rating,
+        'shap_waterfall_plot': shap_plot_path,
+        'key_influences': key_influences,
+        'recommendations': shap_recommendations,
     }
+
 
     # Load the HTML template
     template = get_template("risk_model/genreport.html")  # Create this template
@@ -786,7 +866,7 @@ def generate_pdf(request, prediction_id):
     if pisa_status.err:
         return HttpResponse('Error occurred while generating PDF', status=500)
 
-    return response
+    return response 
 
 def add_user(request):
     if request.method == 'POST':
