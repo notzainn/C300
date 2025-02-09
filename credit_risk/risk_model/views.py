@@ -9,6 +9,7 @@ import seaborn as sbn
 from sklearn.metrics import roc_curve, confusion_matrix, auc
 import shap
 import os
+import markdown
 from django.contrib.auth import login, logout
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -213,7 +214,7 @@ def predict_risk(request):
         # Create a DataFrame for prediction
         input_df = pd.DataFrame([features])
 
-        suggestions = XGB_XAI(input_df)
+        results = XGB_XAI(input_df)
 
         # Predict risk rating
         risk_rating_binary = model.predict(input_df)[0]
@@ -226,6 +227,8 @@ def predict_risk(request):
             'prediction': risk_rating,
             'user_input': user_input,  # Pass user input for saving functionality
             'shap_waterfall_plot': shap_plot_url,
+            'waterfall_explanation': results["explanation"],
+            "recommendations": results["recommendations"]
         })
 
     # Render input form if the request method is GET
@@ -425,10 +428,24 @@ def XGB_XAI(input_df):
     return suggestions
 
 def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
-    suggestions = []
-    sort_interpretation = shap_interpretation.sort_values(by=["SHAP VALUE (Lowest Risk)", "Difference"], 
-                                                            ascending=[False, False])
-    print(sort_interpretation)
+    recommendations = []
+
+    sort_interpretation = shap_interpretation.sort_values(by=(f"SHAP VALUE ({user_rating})"), ascending=False)
+
+
+    top_positive = sort_interpretation.head(3)
+    top_negative = sort_interpretation.tail(3)
+    explanation = f"**Key Influences on Your Risk Rating Include:**\n"
+    explanation += "\n**Increased Risk Factors:**\n\n"
+    for index, row in top_positive.iterrows():
+        explanation += f" - {row['Feature']}: **{row[f'SHAP VALUE ({user_rating})']:.2f}** (Contributed to higher risk)\n"
+    
+    explanation += "\n**Decreased Risk Factors:**\n\n"
+    for index, row in top_negative.iterrows():
+        explanation += f" - {row['Feature']}: **{row[f'SHAP VALUE ({user_rating})']:.2f}** (Helped lower your risk)\n"
+    explanation += "To reduce your risk, focus on improving the factors that increase your risk score"
+
+
     for _, row in sort_interpretation.head(16).iterrows():
         feature = row["Feature"]
         user_val = row["User Input"]
@@ -457,16 +474,20 @@ def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
         elif feature == "Debt to Eequity Ratio" and user_val > low_risk_avg:
             suggestions = "A high Debt-to-Equity ratio  suggests that your company relies heavily on debt financing. Consider lowering debt reliance for operating, increasing equity via reinvestments."
 
-        # if (low_risk_shap > 0 and shap_diff < 0) or (shap_user > 1 and low_risk_shap < 0):
-        #     print(feature, shap_diff)
-        #     if diff > 0:
-        #         percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
-        #         sugg = (f"Your {feature} is {percent_diff}% higher than the average profile of a lowest-risk user ({user_val} vs {low_risk_avg}). ")
-        #                 #f"Consider reducing your debt or increasing equity like increasing your retained earnings could help lower your overall risk rating")
-        #     else: 
-        #         percent_diff = round(abs(((user_val-low_risk_avg)/low_risk_avg) * 100), 2)
-        #         sugg = (f"Your {feature} is {percent_diff}% lower than the average profile of a lowest_risk user ({user_val} vs {low_risk_avg}). ")
-        #     suggestions.append(sugg)
+
+        if suggestions:
+            recommendations.append({
+                "feature": feature,
+                "user_value": round(user_val,2),
+                "lowest_risk_avg": round(low_risk_avg, 2),
+                "shap_value": round(shap_user, 2),
+                "suggestions": suggestions
+            })
+
+    return {
+        "explanation": markdown.markdown(explanation),
+        "recommendations": recommendations,
+    }
 
 
 
