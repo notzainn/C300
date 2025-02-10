@@ -8,22 +8,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
 
-    <!-- <a href="{% url 'manage_users' %}" 
-    class="btn btn-secondary float-end"
-    style="display: inline-block; 
-           padding: 12px 20px; 
-           background-color: white; 
-           color: black; 
-           border-radius: 8px; 
-           text-align: center; 
-           text-decoration: none; 
-           font-size: 16px; 
-           margin-bottom: 10px; 
-           border: none; 
-           cursor: pointer;">
-    Manage Users
- </a> -->
-
     <!-- Include DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
     
@@ -174,8 +158,6 @@
 </head>
 <body>
     <h1>View Your Predictions</h1>
-    <!-- <p>This is a secure area for authorized personnel only.</p> -->
-    <!-- <button onclick="window.location.href='{% url 'main_page' %}';">Back to Main Page</button> -->
     <div id="user-data" data-user-id="{{ request.session.user_id }}"></div>
 
     <h2>Edit Predictions</h2>
@@ -242,11 +224,6 @@
             {% endif %}
         </tbody>        
     </table>
-
- <!--    <div style="margin-top: 20px; text-align: center;">
-        <button onclick="window.location.href='{% url "export_to_pdf" %}'">Export to PDF</button>
-        <button onclick="window.location.href='{% url 'main_page' %}';">Back to Main Page</button>
-    </div> -->
 
     <div style="margin-top: 20px; text-align: center;  display: flex; justify-content: center; gap: 20px;">
         <button 
@@ -355,28 +332,6 @@
         });
     }
 });
-
-
-           /*  // Form submission logic (Add or update company)
-            $('#companyForm').submit(function(event) {
-                event.preventDefault();
-
-                const name = $('#name').val();
-                const revenue = $('#revenue').val();
-                const riskCategory = $('#riskCategory').val();
-
-                // Add a new row to the table
-                const table = $('#companyTable').DataTable();
-                table.row.add([
-                    name,
-                    revenue,
-                    riskCategory,
-                    '<button>Edit</button> <button>Delete</button>'
-                ]).draw();
-
-                // Reset the form
-                $('#companyForm')[0].reset();
-            }); */
         });
     </script>
 </body>

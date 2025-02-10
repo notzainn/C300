@@ -18,30 +18,6 @@ class CustomUser(models.Model):
         return f"{self.username} ({self.role})"
 
 # Model to store user inputs for credit risk prediction
-# class UserInput(models.Model):
-#     user = models.ForeignKey(
-#         User, on_delete=models.CASCADE, related_name="user_inputs"
-#     )
-#     cash = models.FloatField()  # User's cash amount
-#     total_inventory = models.FloatField()  # Total inventory
-#     non_current_asset = models.FloatField()  # Non-current assets
-#     current_liability = models.FloatField()  # Current liabilities
-#     gross_profit = models.FloatField()  # Gross profit
-#     retained_earnings = models.FloatField()  # Retained earnings
-#     earnings_before_interest = models.FloatField()  # Earnings before interest
-#     dividends_per_share = models.FloatField()  # Dividends per share
-#     total_stockholders_equity = models.FloatField()  # Total stockholders' equity
-#     total_market_value = models.FloatField()  # Total market value
-#     total_revenue = models.FloatField()  # Total revenue
-#     net_cash_flow = models.FloatField()  # Net cash flow
-#     total_long_term_debt = models.FloatField()  # Total long-term debt
-#     total_interest_and_related_expense = models.FloatField()  # Total interest and related expense
-#     sales_turnover_net = models.FloatField()  # Sales turnover (net)
-#     created_at = models.DateTimeField(default=now) # Automatically store the creation time
-
-#     def __str__(self):
-#         return f"UserInput {self.id} - Created on {self.created_at}"  # string representation for debugging/admin
-
 class UserInput(models.Model):
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name="user_inputs"  # Use CustomUser instead of User

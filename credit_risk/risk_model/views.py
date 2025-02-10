@@ -1,20 +1,19 @@
 import numpy as np
 import pandas as pd
-import xgboost as xgb
 import pickle as pkl
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import seaborn as sbn
-from sklearn.metrics import roc_curve, confusion_matrix, auc
 import shap
 import os
 import markdown
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
 from django.contrib.auth import login, logout
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages import get_messages
-import re
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.shortcuts import render
@@ -23,7 +22,6 @@ from django.urls import reverse
 from django.contrib import messages
 from .models import Company, UserInput, Prediction, CustomUser # Import models for saving User Input and predictions
 from django.views.decorators.csrf import csrf_exempt
-from .models import Prediction, UserInput
 import json
 
 # Load trained XG boost model
@@ -334,55 +332,12 @@ def companies_api(request):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
-# def admin_login(request):
-#     if request.method == 'POST':
-#         username = request.POST.get('username')
-#         password = request.POST.get('password')
-#         # Mock admin login validation
-#         if username == 'admin' and password == 'password123':
-#             return JsonResponse({'success': True})
-#         return JsonResponse({'success': False})
-#     return JsonResponse({'error': 'Invalid method'}, status=400)
 
 # function to provide explanation for predicted risk 
 def XGB_XAI(input_df):
-    # input_data = {
-    #     "cash": 50000.0,  # Lowercase keys
-    #     "total_inventory": 120000.0,
-    #     "non_current_asset": 100000.0,
-    #     "current_liability": 80000.0,
-    #     "gross_profit": 250000.0,
-    #     "retained_earnings": 100000.0,
-    #     "earnings_before_interest": 75000.0,
-    #     "dividends_per_share": 2.5,
-    #     "total_stockholders_equity": 300000.0,
-    #     "total_market_value": 500000.0,
-    #     "total_revenue": 1000000.0,
-    #     "net_cash_flow": 150000.0,
-    #     "total_long_term_debt": 200000.0,
-    #     "total_interest_and_related_expense": 25000.0,
-    #     "sales_turnover_net": 900000.0,
-    #     # "cash": 500.0,  # Very low cash reserves
-    #     # "total_inventory": 200000.0,  # High inventory that may not be liquid
-    #     # "non_current_asset": 300000.0,  # High fixed assets that are not easily convertible to cash
-    #     # "current_liability": 250000.0,  # High current liabilities
-    #     # "gross_profit": 50000.0,  # Low gross profit compared to revenue
-    #     # "retained_earnings": -20000.0,  # Negative retained earnings indicating losses
-    #     # "earnings_before_interest": 15000.0,  # Low earnings before interest
-    #     # "dividends_per_share": 0.0,  # No dividend payments, possible financial stress
-    #     # "total_stockholders_equity": 50000.0,  # Low equity
-    #     # "total_market_value": 100000.0,  # Low valuation compared to liabilities
-    #     # "total_revenue": 500000.0,  # Moderate revenue but low profitability
-    #     # "net_cash_flow": -50000.0,  # Negative cash flow, indicating financial trouble
-    #     # "total_long_term_debt": 400000.0,  # High long-term debt burden
-    #     # "total_interest_and_related_expense": 50000.0,  # High interest payments
-    #     # "sales_turnover_net": 400000.0,  # Slow turnover, low efficiency
-    # }
-
+    
     predicted_risk_binary = model.predict(input_df)[0]
     predicted_risk_rating = reverse_mapping.get(predicted_risk_binary)
-
-    #predicted_risk_proba = model.predict_proba(input_df)[:, 1]
 
     X_train = data.drop(columns=["Risk Rating"])
     feature_name = X_train.columns
@@ -400,9 +355,7 @@ def XGB_XAI(input_df):
         "Feature": feature_name,
         "User Input": input_df.iloc[0].values,
         "Lowest Risk Avg": lowest_risk_avg.values,
-        "Difference": input_df.iloc[0].values - lowest_risk_avg.values,
         f"SHAP VALUE ({predicted_risk_rating})": shap_values_input[0, :, predicted_risk_binary],
-        #f"SHAP VALUE ({reverse_mapping.get(1)})": shap_values_input[0, :, 1],
         f"SHAP VALUE ({reverse_mapping.get(0)})": shap_values_input[0, :, 0],
     }).round(2)
 
@@ -414,12 +367,12 @@ def XGB_XAI(input_df):
                         data=input_df.iloc[0].values, 
                         feature_names=feature_name
                     )
-    
 
 
     # Generate and save the SHAP waterfall plot
     plt.figure(figsize=(8, 6))
     shap.plots.waterfall(shap_explanation, show=False)
+    plt.title("SHAP Waterfall Plot")
     plt.savefig(shap_plot_path, bbox_inches="tight")  # Save to static folder
     plt.close("all")
 
@@ -450,10 +403,7 @@ def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
         feature = row["Feature"]
         user_val = row["User Input"]
         low_risk_avg = row["Lowest Risk Avg"]
-        diff = row["Difference"]
         shap_user = row[f"SHAP VALUE ({user_rating})"]
-        low_risk_shap = row["SHAP VALUE (Lowest Risk)"]
-        shap_diff = shap_user - low_risk_shap # Difference in shap value
 
         suggestions = ""
         if user_val < low_risk_avg:
@@ -488,12 +438,6 @@ def indiv_assesment(shap_interpretation: pd.DataFrame, user_rating):
         "explanation": markdown.markdown(explanation),
         "recommendations": recommendations,
     }
-
-
-
-from django.http import HttpResponse
-from django.template.loader import get_template
-from xhtml2pdf import pisa
 
 def export_to_pdf(request):
     # Fetch data from the database

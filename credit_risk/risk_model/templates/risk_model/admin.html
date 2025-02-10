@@ -225,11 +225,6 @@
         </tbody>
     </table>
 
- <!--    <div style="margin-top: 20px; text-align: center;">
-        <button onclick="window.location.href='{% url "export_to_pdf" %}'">Export to PDF</button>
-        <button onclick="window.location.href='{% url 'main_page' %}';">Back to Main Page</button>
-    </div> -->
-
     <div style="margin-top: 20px; text-align: center;  display: flex; justify-content: center; gap: 20px;">
         <button 
             style="padding: 15px 20px; font-size: 16px; margin-right: 10px; border-radius: 8px; background-color: white; color: black; border: none; cursor: pointer;" 
@@ -262,27 +257,6 @@
                 "info": true, // Show "Showing X to Y of Z entries"
                 "autoWidth": false // Adjust column width automatically
             });
-
-           /*  // Form submission logic (Add or update company)
-            $('#companyForm').submit(function(event) {
-                event.preventDefault();
-
-                const name = $('#name').val();
-                const revenue = $('#revenue').val();
-                const riskCategory = $('#riskCategory').val();
-
-                // Add a new row to the table
-                const table = $('#companyTable').DataTable();
-                table.row.add([
-                    name,
-                    revenue,
-                    riskCategory,
-                    '<button>Edit</button> <button>Delete</button>'
-                ]).draw();
-
-                // Reset the form
-                $('#companyForm')[0].reset();
-            }); */
         });
     </script>
 </body>
