@@ -15,6 +15,7 @@ static/images
 *.env
 
 # Virtual environment folder (if you use one)
+machine_learning/pycaret_env/
 venv/
 env/
 ENV/
