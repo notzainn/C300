@@ -85,8 +85,9 @@
             The red bar indicates factors increasing your risk, while blue bar indicate factors lowering your risk.
             By understanding these contributions, you can take into account how to properly improve your risk profile.
         </p>
-
+        <hr>
         <p>{{ waterfall_explanation|safe }}</p>
+        <hr>
         <h3>Suggestions for Improvement</h3>
         <div class="suggestions">
             {%if recommendations %}
@@ -116,7 +117,7 @@
                 <p>No recommendations available.</p>
             {% endif %}
         </div>
-
+        <hr>
         <!-- Save Prediction Button -->
         <form method="POST" action="{% url 'save_prediction' %}">
             {% csrf_token %}
@@ -127,11 +128,6 @@
 
         <div class="spacer">
             <a href="{% url 'main_page' %}" class="btn btn-secondary">Back to Form</a>
-        </div>
-
-        <!-- Additional Section for Exporting to PDF -->
-        <div class="loading-section">
-            <a href="{% url 'export_to_pdf' %}" class="btn btn-primary">Print to PDF</a>
         </div>
     </div>
 </body>
